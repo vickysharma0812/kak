@@ -51,6 +51,7 @@ map global user P '<a-!>pbpaste<ret>' -docstring 'paste before from clipboard'
 # ─── LSP ──────────────────────────────────────────────────────────────────────
 # Same servers as ~/.config/helix/languages.toml.
 evaluate-commands %sh{ kak-lsp }
+set-option global lsp_snippet_support false   # no snippets; plain-text completions
 remove-hooks global lsp-filetype-.*   # drop kak-lsp's defaults; ours are below
 
 # Extra filetype detection to match Helix's file-types.
@@ -60,23 +61,6 @@ hook global BufCreate .*\.(ins|Rd|bbx|cbx) %{ set-option buffer filetype latex }
 hook global BufCreate .*\.bib %{
     set-option buffer filetype bibtex
     set-option buffer comment_line '%'
-}
-
-# simple-completion-language-server (snippets, words, paths), shared by several languages
-declare-option -hidden str lsp_scls %{
-    [scls]
-    command = "simple-completion-language-server"
-    root_globs = [".git"]
-    envs = { RUST_LOG = "info,simple-completion-language-server=info", LOG_FILE = "/tmp/completion.log" }
-    settings_section = "_"
-    [scls.settings._]
-    feature_words = true
-    feature_snippets = true
-    snippets_first = true
-    snippets_inline_by_word_tail = false
-    feature_unicode_input = false
-    feature_paths = true
-    feature_citations = false
 }
 
 hook global BufSetOption filetype=fortran %{
@@ -121,7 +105,6 @@ hook global BufSetOption filetype=fortran %{
         ]
         preview = false
     }
-    set-option -add buffer lsp_servers %opt{lsp_scls}
 }
 
 hook global BufSetOption filetype=cmake %{
@@ -130,7 +113,6 @@ hook global BufSetOption filetype=cmake %{
         root_globs = ["CMakeLists.txt", ".git"]
         args = ["stdio"]
     }
-    set-option -add buffer lsp_servers %opt{lsp_scls}
 }
 
 hook global BufSetOption filetype=toml %{
@@ -153,7 +135,6 @@ hook global BufSetOption filetype=markdown %{
         root_globs = [".rumdl.toml", "pyproject.toml", ".git"]
         args = ["server"]
     }
-    set-option -add buffer lsp_servers %opt{lsp_scls}
 }
 
 hook global BufSetOption filetype=latex %{
@@ -172,7 +153,6 @@ hook global BufSetOption filetype=latex %{
         [digestif]
         root_globs = [".git"]
     }
-    set-option -add buffer lsp_servers %opt{lsp_scls}
 }
 
 hook global BufSetOption filetype=bibtex %{
@@ -182,11 +162,7 @@ hook global BufSetOption filetype=bibtex %{
     }
 }
 
-hook global BufSetOption filetype=git-commit %{
-    set-option buffer lsp_servers %opt{lsp_scls}
-}
-
-hook global WinSetOption filetype=(fortran|cmake|toml|markdown|latex|bibtex|git-commit) %{
+hook global WinSetOption filetype=(fortran|cmake|toml|markdown|latex|bibtex) %{
     lsp-enable-window
     lsp-inlay-diagnostics-enable window
     lsp-inlay-hints-enable window
@@ -207,17 +183,15 @@ map global goto y '<esc>:lsp-type-definition<ret>'      -docstring 'type definit
 map global normal <c-n> ':lsp-find-error --include-warnings<ret>'
 map global normal <c-p> ':lsp-find-error --previous --include-warnings<ret>'
 
-# ─── completion & snippets ────────────────────────────────────────────────────
+# ─── completion ─────────────────────────────────────────────────────────────
 # Kakoune inserts the highlighted item as soon as you move to it (<tab>/<c-n>),
 # so there is no "accept" step. To match Helix:
 #   <tab> / <s-tab>   move through the completion menu
 #   <ret>             accept: close the menu without a newline (only after you
 #                     picked an item; otherwise <ret> is a normal newline)
-#   <tab>             with no menu open: jump to the next snippet placeholder
 declare-option -hidden bool completion_menu false
 
-# (Kakoune itself only uses <c-n>/<c-p> in this menu; window maps win over the
-# global <tab> mapping below while the menu is open.)
+# (Kakoune itself only uses <c-n>/<c-p> in this menu.)
 hook global InsertCompletionShow .* %{
     set-option window completion_menu true
     map window insert <tab>   <c-n>
@@ -248,8 +222,6 @@ define-command -hidden completion-resume %{
     remove-hooks window completion-resume
     set-option window completers %opt{completers_saved}
 }
-map global insert <tab> '<a-;>:try lsp-snippets-select-next-placeholders catch %{ execute-keys -with-hooks <lt>tab> }<ret>' \
-    -docstring 'next snippet placeholder'
 
 # ─── formatter ────────────────────────────────────────────────────────────────
 # Same as Helix (auto-format = true there): an external formatcmd where Helix
