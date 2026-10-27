@@ -52,6 +52,9 @@ map global user P '<a-!>pbpaste<ret>' -docstring 'paste before from clipboard'
 # Same servers as ~/.config/helix/languages.toml.
 evaluate-commands %sh{ kak-lsp }
 set-option global lsp_snippet_support false   # no snippets; plain-text completions
+# Ask for code actions only on <space>a, like Helix. Polling them on every idle
+# makes fortitude return an error whenever it thinks the file has a syntax error.
+set-option global lsp_auto_show_code_actions false
 remove-hooks global lsp-filetype-.*   # drop kak-lsp's defaults; ours are below
 
 # Extra filetype detection to match Helix's file-types.
