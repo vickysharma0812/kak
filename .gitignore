@@ -1,0 +1,5 @@
+# plugin checkouts (none currently)
+plugins/
+# pre-rewrite config, kept locally only
+kakrc.bak-*
+.DS_Store

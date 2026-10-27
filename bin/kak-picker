@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+# fzf pickers for Kakoune, run inside a tmux popup.
+# usage: kak-picker <session> <client> <files|grep|buffers|yazi> [list-file|start-path]
+# The choice is sent back to the Kakoune client with `kak -p`.
+
+session=$1 client=$2 mode=$3 list=$4
+
+# Quote a string for Kakoune ('...' with doubled single quotes).
+kq() { local q="'"; printf "'%s'" "${1//$q/$q$q}"; }
+
+send() { printf 'evaluate-commands -client %s -- %s\n' "$client" "$(kq "$1")" | kak -p "$session"; }
+
+preview='bat --color=always --style=numbers --line-range=:300 {} 2>/dev/null || cat {}'
+
+case $mode in
+files)
+    sel=$(fd --type f --hidden --exclude .git --exclude build |
+        fzf --prompt='files> ' --preview "$preview") || exit 0
+    send "edit -existing $(kq "$sel")"
+    ;;
+grep)
+    # live grep: rg reruns on every keystroke, fzf only displays.
+    rg_cmd='rg --line-number --column --no-heading --color=always --smart-case --'
+    sel=$(: | fzf --ansi --disabled --prompt='grep> ' \
+        --bind "start:reload:$rg_cmd {q} || true" \
+        --bind "change:reload:$rg_cmd {q} || true" \
+        --delimiter : \
+        --preview 'bat --color=always --style=numbers --highlight-line {2} {1}' \
+        --preview-window '+{2}/2') || exit 0
+    IFS=: read -r file line col _ <<<"$sel"
+    send "edit -existing $(kq "$file") $line $col"
+    ;;
+buffers)
+    sel=$(fzf --prompt='buffers> ' --preview "$preview" <"$list")
+    rm -f "$list"
+    [ -n "$sel" ] && send "buffer $(kq "$sel")"
+    ;;
+yazi)
+    # $4 is where yazi starts (the current file, or the cwd). Every chosen
+    # file is opened; the last one is shown.
+    chosen=$(mktemp "${TMPDIR:-/tmp}/kak-yazi.XXXXXX")
+    yazi "$list" --chooser-file="$chosen"
+    while IFS= read -r f; do
+        [ -f "$f" ] && send "edit -existing $(kq "$f")"
+    done <"$chosen"
+    rm -f "$chosen"
+    ;;
+esac

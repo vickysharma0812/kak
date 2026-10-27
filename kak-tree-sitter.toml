@@ -1,0 +1,21 @@
+# kak-tree-sitter user config (merged on top of `ktsctl default-config`).
+# Loaded via `kak-tree-sitter --config` in kakrc.
+
+# Extra capture groups used by the Fortran queries (appended to the defaults).
+# "number" is deliberately NOT listed: the queries tag every `end` as @number,
+# which Helix's theme ignores (so `end do` keeps the keyword colour). Leaving it
+# out makes KTS ignore it the same way.
+[highlight]
+groups = ["function.call"]
+
+# Fortran is not in the KTS defaults. Reuse the grammar and queries that Helix
+# already built from the tree-sitter-fortran fork, so both editors stay in sync.
+# After `hx --grammar build`, nothing needs to be done here.
+[grammar.fortran.source.local]
+path = "/Users/easifem/.config/helix/runtime/grammars/fortran.so"
+
+[language.fortran.queries.source.local]
+path = "/Users/easifem/.config/helix/runtime/queries/fortran"
+
+[language.fortran]
+remove_default_highlighter = true
