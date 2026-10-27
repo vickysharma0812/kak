@@ -3,3 +3,5 @@ plugins/
 # pre-rewrite config, kept locally only
 kakrc.bak-*
 .DS_Store
+# patched scls, built by bin/build-scls-kak
+bin/scls-kak

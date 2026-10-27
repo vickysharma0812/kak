@@ -1,0 +1,86 @@
+#!/usr/bin/env perl
+# Rewrite a VSCode-style snippet into the subset kak-lsp can expand.
+# Reads the snippet on stdin, writes it to stdout. $KAK_SNIPPET_FILE (optional)
+# is the buffer's file, for the TM_FILENAME* variables.
+#
+#   variables   ${CURRENT_YEAR}, $TM_FILENAME, ... are filled in; unknown ones
+#               become their default (${VAR:default}) or nothing
+#   transforms  ${1/regex/format/flags} becomes a plain mirror $1
+#   nesting     an outer ${N:...} that contains other tabstops is replaced by
+#               its contents:  do${1: ${2:i} = ${3:1}}  ->  do ${2:i} = ${3:1}
+use strict;
+use warnings;
+use File::Basename qw(basename dirname);
+use POSIX qw(strftime);
+
+my $s = do { local $/; <STDIN> };
+
+my $file = $ENV{KAK_SNIPPET_FILE} // '';
+(my $base = basename($file)) =~ s/\.[^.]*$//;
+my @t = localtime;
+my %var = (
+    CURRENT_YEAR             => strftime('%Y', @t),
+    CURRENT_YEAR_SHORT       => strftime('%y', @t),
+    CURRENT_MONTH            => strftime('%m', @t),
+    CURRENT_MONTH_NAME       => strftime('%B', @t),
+    CURRENT_MONTH_NAME_SHORT => strftime('%b', @t),
+    CURRENT_DATE             => strftime('%d', @t),
+    CURRENT_DAY_NAME         => strftime('%A', @t),
+    CURRENT_DAY_NAME_SHORT   => strftime('%a', @t),
+    CURRENT_HOUR             => strftime('%H', @t),
+    CURRENT_MINUTE           => strftime('%M', @t),
+    CURRENT_SECOND           => strftime('%S', @t),
+    CURRENT_SECONDS_UNIX     => time,
+    TM_FILENAME              => basename($file),
+    TM_FILENAME_BASE         => $base,
+    TM_FILEPATH              => $file,
+    TM_DIRECTORY             => $file eq '' ? '' : dirname($file),
+);
+
+# Index just past the '}' closing the '{' that ends at $open, or -1.
+sub close_brace {
+    my ($open) = @_;
+    my ($i, $depth) = ($open, 1);
+    while ($i < length $s && $depth) {
+        my $c = substr $s, $i, 1;
+        if ($c eq "\\") { $i += 2; next }
+        $depth++ if $c eq '{';
+        $depth-- if $c eq '}';
+        $i++;
+    }
+    return $depth ? -1 : $i;
+}
+
+# transforms (also on variables): ${1/...} -> $1, ${VAR/...} -> value
+while ($s =~ /\$\{(\d+|[A-Z_][A-Z0-9_]*)\//g) {
+    my ($start, $name, $end) = ($-[0], $1, close_brace($+[0]));
+    last if $end < 0;
+    my $repl = $name =~ /^\d/ ? "\$$name" : ($var{$name} // '');
+    substr($s, $start, $end - $start) = $repl;
+    pos($s) = $start + length $repl;
+}
+
+# variables: known ones filled in, else ${VAR:default} -> default, else ''
+1 while $s =~ s/\$\{([A-Z_][A-Z0-9_]*):([^{}]*)\}/$var{$1} \/\/ $2/e;
+$s =~ s/\$\{([A-Z_][A-Z0-9_]*)\}/$var{$1} \/\/ ''/ge;
+$s =~ s/\$([A-Z_][A-Z0-9_]*)/$var{$1} \/\/ ''/ge;
+
+# nesting
+OUTER: while (1) {
+    while ($s =~ /\$\{\d+:/g) {
+        my ($start, $open) = ($-[0], $+[0]);
+        my $end = close_brace($open);
+        last OUTER if $end < 0;
+        my $body = substr $s, $open, $end - 1 - $open;
+        if ($body =~ /\$(?:\{\d+|\d)/) {
+            substr($s, $start, $end - $start) = $body;
+            next OUTER;
+        }
+        pos($s) = $start + 1;
+    }
+    last;
+}
+
+# ${1:} and ${1} are just tabstops
+$s =~ s/\$\{(\d+):?\}/\$$1/g;
+print $s;

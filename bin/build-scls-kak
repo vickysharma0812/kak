@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# Build the Kakoune-only copy of simple-completion-language-server (bin/scls-kak).
+#
+# Upstream scls ignores full-document didChange notifications, which is all
+# kak-lsp sends, so its snippets never show up in Kakoune. patches/
+# scls-full-sync.patch fixes that. Helix's own scls binary is not touched.
+#
+# usage: bin/build-scls-kak [git-rev]   (default: a75b382, the rev Helix uses)
+set -euo pipefail
+
+rev=${1:-a75b382d304a9d0e644da8c610f6200a6d662f67}
+here=$(cd "$(dirname "$0")/.." && pwd)
+work=$(mktemp -d)
+trap 'rm -rf "$work"' EXIT
+
+git clone -q https://github.com/estin/simple-completion-language-server.git "$work/src"
+git -C "$work/src" checkout -q "$rev"
+git -C "$work/src" apply "$here/patches/scls-full-sync.patch"
+CARGO_TARGET_DIR="$work/target" cargo build --release --locked --manifest-path "$work/src/Cargo.toml"
+install -m 755 "$work/target/release/simple-completion-language-server" "$here/bin/scls-kak"
+echo "installed $here/bin/scls-kak"
