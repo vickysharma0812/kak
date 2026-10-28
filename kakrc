@@ -457,6 +457,10 @@ hook global ModeChange .*:normal %{ set-option window modeline_mode 'NOR'; set-f
 hook global ModeChange .*:insert %{ set-option window modeline_mode 'INS'; set-face window ModelineMode ModeInsert }
 hook global ModeChange .*:prompt %{ set-option window modeline_mode 'CMD'; set-face window ModelineMode ModePrompt }
 
-set-option global modelinefmt '{ModelineMode} %opt{modeline_mode} {StatusLine} {StatusLineInfo}%val{bufname}{StatusLine} {{context_info}} {{mode_info}} '
+# File name only, not the path; computed once per buffer, not on every redraw.
+declare-option -hidden str modeline_bufname
+hook global BufCreate .* %{ set-option buffer modeline_bufname %sh{ printf %s "${kak_bufname##*/}" } }
+
+set-option global modelinefmt '{ModelineMode} %opt{modeline_mode} {StatusLine} {StatusLineInfo}%opt{modeline_bufname}{StatusLine} {{context_info}} {{mode_info}} '
 set-option -add global modelinefmt %opt{lsp_modeline}
 set-option -add global modelinefmt ' {ModelineError}● %opt{lsp_diagnostic_error_count} {ModelineWarning}▲ %opt{lsp_diagnostic_warning_count}{StatusLine}  {StatusLineValue}%val{cursor_line}:%val{cursor_char_column}{StatusLine}  {ModelineDim}%opt{filetype} '
