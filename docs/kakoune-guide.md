@@ -14,7 +14,7 @@ Don't try to learn every table at once. Go in stages, and do the
 1. **Day 1–2: survive.** [The core idea](#the-core-idea), [Modes](#modes),
    [Movement](#movement), `d` `c` `y` `p` `u` from [Editing](#editing), `:w` `:q`.
    Read [Coming from Helix](#coming-from-helix): most of your Helix habits work.
-2. **Day 3–5: select like Kakoune.** `x` + `J`, objects (`<a-i>` / `<a-a>`),
+2. **Day 3–5: select like Kakoune.** `x` (and `xxx`), objects (`<a-i>` / `<a-a>`),
    `f` / `t`, search. Use `<space>f` and `gd` instead of scrolling.
 3. **Week 2: multiple selections.** `%`, `s`, `S`, `<a-s>`, `<a-k>`, `&`, `C`.
    This is where Kakoune pays off: [Recipes](#recipes-for-fortran) are all built
@@ -41,10 +41,10 @@ Read keys left to right as a sentence: *select something*, *narrow it*,
 | Keys | Read as |
 |---|---|
 | `wd` | select the next word, delete it |
-| `xJJd` | select this line, extend 2 lines down, delete all 3 |
+| `xxxd` | select this line, add the next 2, delete all 3 |
 | `<a-i>(c` | select inside the parentheses, change it |
 | `%sfoo<ret>cbar<esc>` | select the whole file, select every `foo`, change them all to `bar` |
-| `x<a-s><a-k>print<ret>d` | select lines, split into one per line, keep those with `print`, delete |
+| `%<a-s><a-k>print<ret>d` | select the file, split into one per line, keep those with `print`, delete |
 
 Because the selection is always visible *before* you act, you can check it and
 fix it (`<a-u>`, `,`, `<a-k>`) before pressing `d` or `c`.
@@ -57,7 +57,6 @@ Most keys are the same (`w` `b` `e` `f` `t` `x` `%` `s` `S` `C` `,` `;` `&` `|`
 | Helix | Kakoune (this config) | Note |
 |---|---|---|
 | `v` (select mode) | hold **Shift** | `W`, `J`, `L` ... extend instead of move |
-| `x` `x` `x` | `x` then `J` `J` | `x` again does not grow the selection |
 | `J` | `<a-j>` | `J` extends the selection down |
 | `K` / `<a-K>` | `<a-k>` / `<a-K>` | keep / drop selections matching a regex |
 | `N` | `<a-n>` | `N` **adds** the next match as a new selection |
@@ -109,8 +108,11 @@ Add Shift to extend instead: `W`, `J`, `L`, `F<c>`, `M`, `G`, etc.
 
 | Key | Action |
 |---|---|
-| `x` | expand to full lines (pressing it again does **not** add the next line) |
-| `x` then `J` / `K` | add lines below / above (`x5J` = this line plus 5) |
+| `x` | select the line; pressed again, add the next line (Helix-style) |
+| `3x` | select 3 lines (on whole lines: add 3 more) |
+| `X` | extend to full lines without adding any (Kakoune's own `x`) |
+| `<a-x>` | shrink to full lines |
+| `J` / `K` | extend the selection a line down / up (`x5J` = this line plus 5) |
 | `%` | whole file |
 | `<a-i>` / `<a-a>` | inside / around an object, followed by: `w` word, `(` `[` `{` `<` brackets, `"` `'` quotes, `p` paragraph |
 | `[` / `]` | to the start / end of an object (same object keys); `{` / `}` extend |
@@ -249,7 +251,7 @@ Each recipe is a sentence of the keys above. All were tested in this config.
 | ... in the whole file | `%` `s\bn\b<ret>` `c` ... `<esc>` |
 | Exact case only (`n`, not `N`) | in the `s` prompt, delete the `(?i)` first |
 | Align the `::` of declarations | select the lines (`x` `J`...), `s::<ret>` `&` |
-| Delete every `print` line | `%` `<a-s>` `<a-k>print<ret>` `x` `d` |
+| Delete every `print` line | `%` `<a-s>` `<a-k>print<ret>` `d` |
 | Select a `do` loop body | cursor in the body, `<a-i>i` |
 | Change one call argument | cursor on it, `<a-i>u` `c` |
 | Add `, intent(in)` to several declarations | select the lines, `s\h::<ret>` `i, intent(in)<esc>` |
@@ -377,12 +379,13 @@ subroutine foo(n, x)
 end subroutine foo
 ```
 
-1. Delete the whole `do` loop: on `do`, `x` `3J` `d`. (Then try `<a-a>c...` from
+1. Delete the whole `do` loop: on `do`, `4x` `d` (or `x` `x` `x` `x` `d`). (Then try `<a-a>c...` from
    [do loops](#selecting-a-whole-block-eg-a-do-loop).)
 2. Select every `n` / `N`: `%` `s\bn\b<ret>`. The status line shows 5 selections.
    `<esc>` or `,` to get back to one.
-3. Align the declarations: `2g` `x` `2J` `s::<ret>` `&`.
-4. Delete both `print` lines in one go: `%` `<a-s>` `<a-k>print<ret>` `x` `d`.
+3. Align the declarations: `2g` `3x` `s::<ret>` `&`.
+4. Delete both `print` lines in one go: `%` `<a-s>` `<a-k>print<ret>` `d`
+   (`<a-s>` already gives whole lines, so no `x`).
 5. Change `x + 1.0` to `2.0*x`: on `x` of `x + 1.0`, `<a-i>u` `c2.0*x<esc>`.
 6. Swap `"s"` to `'s'`: cursor inside it, `mr"'`.
 7. Upper-case every `integer`: `%` `sinteger<ret>` `~`.

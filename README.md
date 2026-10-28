@@ -8,7 +8,7 @@ formatters, tree-sitter grammar, theme and space-leader keys.
 ## Features
 
 - **Tree-sitter highlighting** via [kak-tree-sitter](https://sr.ht/~hadronized/kak-tree-sitter/),
-  reusing the Fortran grammar and queries that Helix builds.
+  reusing the Fortran and TOML grammars and queries that Helix builds.
 - **Fortran filetype** with auto-indent (Kakoune ships none): `autoload/fortran.kak`.
 - **LSP** via [kakoune-lsp](https://github.com/kakoune-lsp/kakoune-lsp), with the same
   servers as Helix:

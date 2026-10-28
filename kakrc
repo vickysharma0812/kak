@@ -41,6 +41,24 @@ map global normal ?     '?(?i)'
 map global normal <a-/> '<a-/>(?i)'
 map global normal <a-?> '<a-?>(?i)'
 
+# Helix's x: select the line; pressed again on whole lines, add the next line.
+# A count selects that many lines (3x). X is Kakoune's x (to line bounds only).
+map global normal x ': helix-x %val{count}<ret>' -docstring 'select line, then add the next'
+map global normal X 'x'                            -docstring 'extend to line bounds'
+define-command -hidden helix-x -params 1 %{
+    execute-keys <a-:>
+    helix-x-extend %val{selections_desc} %arg{1}
+}
+define-command -hidden helix-x-extend -params 2 %{
+    execute-keys x
+    # unchanged by x: the selections were already whole lines
+    evaluate-commands %sh{
+        c=${2:-0}; [ "$c" -lt 1 ] && c=1
+        if [ "$kak_selections_desc" = "$1" ]; then j=$c; else j=$((c - 1)); fi
+        [ $j -gt 0 ] && echo "execute-keys ${j}Jx"
+    }
+}
+
 add-highlighter global/ number-lines -relative -hlcursor -separator ' '
 add-highlighter global/ show-matching
 add-highlighter global/ wrap -word -indent -marker '↪ '
@@ -440,7 +458,12 @@ define-command -hidden popup -params 1.. -docstring 'run a command in a tmux pop
     tmux display-popup -E -w 90% -h 90% -d "$PWD" "$@" >/dev/null 2>&1 </dev/null &
 } }
 
-define-command lazygit -docstring 'lazygit in a popup' %{ popup lazygit }
+define-command lazygit -docstring 'lazygit in a popup' %{
+    # refresh the branch in the status line when lazygit exits
+    popup sh -c %sh{
+        printf 'lazygit; echo "evaluate-commands -client %s modeline-update-branch" | kak -p %s' "$kak_client" "$kak_session"
+    }
+}
 
 # easifem build / test (same scripts as Helix's "+" mode)
 define-command easifem-build-base    %{ nop %sh{ ~/.config/tmux/scripts/buildBase.sh    >/dev/null 2>&1 </dev/null & } }
@@ -541,6 +564,21 @@ hook global ModeChange .*:prompt %{ set-option window modeline_mode 'CMD'; set-f
 declare-option -hidden str modeline_bufname
 hook global BufCreate .* %{ set-option buffer modeline_bufname %sh{ printf %s "${kak_bufname##*/}" } }
 
-set-option global modelinefmt '{ModelineMode} %opt{modeline_mode} {StatusLine} {StatusLineInfo}%opt{modeline_bufname}{StatusLine} {{context_info}} {{mode_info}} '
+# Git branch of the file's directory (short commit when detached), like Helix's
+# version-control element. One git call when a buffer is shown, when the terminal
+# regains focus, and after lazygit closes.
+declare-option -hidden str modeline_branch
+define-command -hidden modeline-update-branch %{
+    set-option buffer modeline_branch %sh{
+        cd "${kak_buffile%/*}" 2>/dev/null || exit
+        b=$(git branch --show-current 2>/dev/null) || exit
+        [ -n "$b" ] || b=$(git rev-parse --short HEAD 2>/dev/null)
+        [ -n "$b" ] && printf ' %s ' "$b"
+    }
+}
+hook global WinDisplay .* modeline-update-branch
+hook global FocusIn    .* modeline-update-branch
+
+set-option global modelinefmt '{ModelineMode} %opt{modeline_mode} {StatusLine} {StatusLineInfo}%opt{modeline_bufname}{StatusLine} {ModelineBranch}%opt{modeline_branch}{StatusLine}{{context_info}} {{mode_info}} '
 set-option -add global modelinefmt %opt{lsp_modeline}
 set-option -add global modelinefmt ' {ModelineError}● %opt{lsp_diagnostic_error_count} {ModelineWarning}▲ %opt{lsp_diagnostic_warning_count}{StatusLine}  {StatusLineValue}%val{cursor_line}:%val{cursor_char_column}{StatusLine}  {ModelineDim}%opt{filetype} '

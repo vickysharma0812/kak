@@ -19,3 +19,11 @@ path = "/Users/easifem/.config/helix/runtime/queries/fortran"
 
 [language.fortran]
 remove_default_highlighter = true
+
+# TOML: also reuse Helix's grammar and queries (KTS would otherwise need
+# `ktsctl sync toml`), so TOML looks the same in both editors.
+[grammar.toml.source.local]
+path = "/Users/easifem/.config/helix/runtime/grammars/toml.so"
+
+[language.toml.queries.source.local]
+path = "/Users/easifem/.config/helix/runtime/queries/toml"
