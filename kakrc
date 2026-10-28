@@ -113,21 +113,15 @@ hook global BufSetOption filetype=fortran %{
             "/Users/easifem/.easifem/easifem/src/tomlf/src/**",
         ]
 
+        # Lint rules come from the project's config file (fortitude.toml,
+        # .fortitude.toml, [extra.fortitude] in fpm.toml, or pyproject.toml);
+        # projects without one get fortitude's defaults.
         [fortitude]
-        root_globs = ["fpm.toml", "fortitude.toml", ".git", "CMakeLists.txt"]
+        root_globs = ["fortitude.toml", ".fortitude.toml", "fpm.toml", ".git", "CMakeLists.txt"]
         args = ["server"]
         settings_section = "_"
         [fortitude.settings._.settings]
-        linelength = 78
-        [fortitude.settings._.settings.check]
-        select = ["C", "S"]
-        ignore = [
-            "superfluous-implicit-none",
-            "implicit-external-procedures",
-            "interface-implicit-typing",
-            "bad-quote-string",
-        ]
-        preview = false
+        configurationPreference = "filesystemFirst"
     }
     set-option -add buffer lsp_servers %opt{lsp_scls}
 }
