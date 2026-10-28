@@ -393,16 +393,86 @@ end subroutine foo
 8. Put `1` at the start of lines 2–4 with one insert: `2g` `C` `C` `I1<esc>`
    (`C` adds a cursor on the next line).
 
+## Patched tools
+
+Three tools are patched for this config. The patches live in `patches/`; Helix
+uses none of these binaries, so rebuilding them never affects Helix.
+
+| Tool | Patch | What it fixes | Symptom without it |
+|---|---|---|---|
+| scls (`bin/scls-kak`) | `scls-full-sync.patch` | scls ignored the full-document changes kak-lsp sends | no snippets in the completion menu |
+| kak-tree-sitter 3.2.2 | `kak-tree-sitter-text-objects.patch` | nodes ending at a line start; `(_)+` captures kept only the first node | `<a-i>f` / `<a-a>f` / `<a-i>t` do nothing or select one line |
+| kak-lsp 22.0.0 | `kak-lsp-did-save.patch` | `didSave` was not sent to efm-langserver | no gfortran (efm) errors after `:w` |
+
+Redo the matching step after **any** reinstall or upgrade of that tool (for
+example `cargo install --force kak-lsp` puts the unpatched version back).
+
+### scls
+
+A separate Kakoune-only copy, built by a script (needs `git` and `cargo`); Helix's
+`simple-completion-language-server` binary is not touched:
+
+```fish
+~/.config/kak/bin/build-scls-kak     # writes ~/.config/kak/bin/scls-kak
+```
+
+Then restart Kakoune. The script pins the scls version Helix uses; pass another
+git revision as an argument to build a different one (the patch may need updating).
+
+### kak-tree-sitter
+
+Download the crate source, apply the patch, install over the stock binary:
+
+```fish
+cd (mktemp -d)
+curl -sL https://crates.io/api/v1/crates/kak-tree-sitter/3.2.2/download | tar xz
+cd kak-tree-sitter-3.2.2
+git apply ~/.config/kak/patches/kak-tree-sitter-text-objects.patch
+cargo install --locked --path . --force
+```
+
+Then restart the tree-sitter server and Kakoune:
+`kill (cat $TMPDIR/kak-tree-sitter/pid)`.
+
+### kak-lsp
+
+Same steps with the kak-lsp crate:
+
+```fish
+cd (mktemp -d)
+curl -sL https://crates.io/api/v1/crates/kak-lsp/22.0.0/download | tar xz
+cd kak-lsp-22.0.0
+git apply ~/.config/kak/patches/kak-lsp-did-save.patch
+cargo install --locked --path . --force
+```
+
+Then restart Kakoune (each session starts its own kak-lsp).
+
+### Checking and upgrading
+
+- `command -v kak-lsp kak-tree-sitter` should print paths in `~/.cargo/bin`.
+- **Upgrading** to a newer version: put the new version number in the `curl` and
+  `cd` lines. If `git apply` fails, the code changed; check whether the newer
+  release already fixes the bug (then no patch is needed), otherwise the patch
+  must be updated.
+- **Undo a patch**: reinstall the stock version, e.g.
+  `cargo install --locked --force kak-lsp`.
+- Status upstream: the scls bug is reported as
+  [estin/simple-completion-language-server#238](https://github.com/estin/simple-completion-language-server/issues/238);
+  the kak-tree-sitter and kak-lsp bugs are not reported yet.
+
 ## Troubleshooting
 
 - **Errors or LSP messages**: `:buffer *debug*`
-- **`<a-i>f` / `<a-a>f` do nothing**: `kak-tree-sitter` was reinstalled without
-  `patches/kak-tree-sitter-text-objects.patch`; rebuild it with the patch
-- **No gfortran errors (efm) after saving**: `kak-lsp` was reinstalled without
-  `patches/kak-lsp-did-save.patch`; rebuild it with the patch. efm only runs on
-  save, so errors appear after `:w`, not while typing
-- **No Fortran highlighting**: restart the tree-sitter server, then restart Kakoune:
-  `kill (cat $TMPDIR/kak-tree-sitter/pid)`
+- **`<a-i>f` / `<a-a>f` do nothing**: kak-tree-sitter is unpatched; see
+  [Patched tools](#kak-tree-sitter)
+- **No gfortran errors (efm) after saving**: kak-lsp is unpatched; see
+  [Patched tools](#kak-lsp). efm only runs on save, so errors appear after `:w`,
+  not while typing
+- **No Fortran or TOML highlighting**: restart the tree-sitter server, then
+  restart Kakoune: `kill (cat $TMPDIR/kak-tree-sitter/pid)`
 - **No snippets**: start Kakoune from fish (it sets `SNIPPETS_PATH`), and check
-  that `bin/scls-kak` exists (rebuild with `bin/build-scls-kak`)
+  that `bin/scls-kak` exists; see [Patched tools](#scls)
 - **Pickers do nothing**: Kakoune must run inside tmux
+- **`<space>E` (broot) opens nothing**: `<ret>` must be on a file, not a folder;
+  check `broot/kak.hjson` exists

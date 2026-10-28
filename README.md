@@ -89,6 +89,9 @@ adjust it if Kakoune is installed elsewhere.
 
 ## Notes
 
+Step-by-step rebuild instructions for the patched tools are in
+[docs/kakoune-guide.md](docs/kakoune-guide.md#patched-tools).
+
 - **Patched scls.** Stock simple-completion-language-server ignores full-document
   `didChange` notifications, which is all kakoune-lsp sends, so it returns no
   snippets in Kakoune. `bin/build-scls-kak` builds a Kakoune-only copy with the fix;
