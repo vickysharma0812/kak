@@ -66,6 +66,8 @@ evaluate-commands %sh{ kak-lsp }
 # Ask for code actions only on <space>a, like Helix. Polling them on every idle
 # makes fortitude return an error whenever it thinks the file has a syntax error.
 set-option global lsp_auto_show_code_actions false
+# Show the signature of the call being typed, like Helix's auto-signature-help.
+lsp-auto-signature-help-enable
 remove-hooks global lsp-filetype-.*   # drop kak-lsp's defaults; ours are below
 
 # Extra filetype detection to match Helix's file-types.
@@ -457,6 +459,75 @@ map global user    + ':enter-user-mode easifem<ret>'   -docstring 'easifem build
 map global easifem b ':easifem-build-base<ret>'        -docstring 'build base'
 map global easifem c ':easifem-build-classes<ret>'     -docstring 'build classes'
 map global easifem + ':easifem-run-test<ret>'          -docstring 'run test for this file'
+
+# ─── match / surround (Helix's `m` mode) ──────────────────────────────────────
+# mm match bracket, ms add, mr replace, md delete, mi / ma inside / around.
+# Pair keys: ( ) b  [ ] r  { } B  < > a  " Q  ' q  ` g; ms takes any character.
+# Kakoune's own `m` is now `mm`; `M` (extend to the matching bracket) is unchanged.
+declare-user-mode match
+map global normal m ':enter-user-mode match<ret>'
+map global match m 'm'     -docstring 'goto matching bracket'
+map global match s ':on-key -mode-name surround %{ surround-pair surround-add %val{key} }<ret>' -docstring 'surround add'
+map global match r ':on-key -mode-name surround %{ set-option window surround_from %val{key}; on-key -mode-name surround-with %{ surround-pair surround-replace %val{key} } }<ret>' -docstring 'surround replace'
+map global match d ':on-key -mode-name surround %{ surround-delete %val{key} }<ret>' -docstring 'surround delete'
+map global match i '<a-i>' -docstring 'select inside object'
+map global match a '<a-a>' -docstring 'select around object'
+
+# surround-pair <command> <key>: run <command> <open> <close> for that key.
+define-command -hidden surround-pair -params 2 %{ evaluate-commands %sh§
+    case $2 in
+        '('|')'|b)        o='(' c=')' ;;
+        '['|']'|r)        o='[' c=']' ;;
+        '{'|'}'|B)        o='{' c='}' ;;
+        '<lt>'|'<gt>'|a)  o='<' c='>' ;;
+        Q|'<dquote>')     o='"' c='"' ;;
+        q|'<quote>')      o="'" c="'" ;;
+        g)                o='`' c='`' ;;
+        '<space>')        o=' ' c=' ' ;;
+        '<plus>')         o='+' c='+' ;;
+        '<minus>')        o='-' c='-' ;;
+        '<semicolon>')    o=';' c=';' ;;
+        '<percent>')      o='%' c='%' ;;
+        '<esc>')          exit ;;
+        '<'*'>')          echo "fail 'surround: no pair for $2'"; exit ;;
+        *)                o=$2 c=$2 ;;
+    esac
+    q="'"
+    printf "%s '%s' '%s'\n" "$1" "${o//$q/$q$q}" "${c//$q/$q$q}"
+§ }
+
+# Like Helix, the selections then include the new pair.
+define-command -hidden surround-add -params 2 %{
+    evaluate-commands -save-regs '"' %{
+        set-register '"' %arg{1}
+        execute-keys -draft P
+        set-register '"' %arg{2}
+        execute-keys -draft p
+        execute-keys '<a-:>L<a-;>H<a-;>'
+    }
+}
+
+# <a-a> selects the pair with its contents, <a-S> keeps just the two ends.
+define-command -hidden surround-delete -params 1 %{
+    evaluate-commands -draft %{
+        execute-keys "<a-a>%arg{1}<a-S>d"
+    }
+}
+
+# surround-replace <open> <close>: replace the pair keyed by surround_from
+declare-option -hidden str surround_from
+define-command -hidden surround-replace -params 2 %{
+    evaluate-commands -draft -save-regs '"' %{
+        execute-keys "<a-a>%opt{surround_from}<a-S>"
+        # the ends alternate open, close, open, close ... in buffer order
+        evaluate-commands %sh{
+            q="'" o="'${1//$q/$q$q}'" c="'${2//$q/$q$q}'" vals=
+            i=0; while [ $i -lt $kak_selection_count ]; do vals="$vals $o $c"; i=$((i + 2)); done
+            echo "set-register '\"' $vals"
+        }
+        execute-keys R
+    }
+}
 
 # ─── modeline / prompt ────────────────────────────────────────────────────────
 # Helix-style: coloured mode badge, file, LSP status, diagnostics, position.

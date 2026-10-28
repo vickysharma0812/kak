@@ -1,0 +1,15 @@
+diff --git a/src/text_sync.rs b/src/text_sync.rs
+index 3b1b79f..e970f7b 100644
+--- a/src/text_sync.rs
++++ b/src/text_sync.rs
+@@ -110,6 +110,10 @@ pub fn text_document_did_save(meta: EditorMeta, ctx: &mut Context) {
+                 TextDocumentSyncSaveOptions::Supported(true) => false,
+                 TextDocumentSyncSaveOptions::Supported(false) => continue,
+             },
++            // A bare sync kind says nothing about saving. Send didSave anyway, as Helix
++            // does: servers such as efm-langserver (lint-on-save) rely on it. See
++            // https://github.com/microsoft/language-server-protocol/issues/288
++            Some(TextDocumentSyncCapability::Kind(_)) => false,
+             _ => continue,
+         };
+         let text = if include_text {

@@ -44,7 +44,8 @@ formatters, tree-sitter grammar, theme and space-leader keys.
 | `<space>=` | format | `<space>c` | comment lines |
 | `<space>t` | tree-sitter menu | `<a-up>` / `<a-down>` | select parent / child node |
 | `<space>g` | lazygit | `<space>+` | easifem build (`b`, `c`) and run test (`+`) |
-| `<space>p` / `<space>P` | paste from clipboard | | |
+| `<space>p` / `<space>P` | paste from clipboard | `mm` | matching bracket |
+| `ms` / `mr` / `md` | surround add / replace / delete | `mi` / `ma` | select inside / around |
 
 In insert mode: `<tab>`/`<s-tab>` or `<down>`/`<up>` move through the completion menu, `<ret>` accepts
 the picked item, and `<tab>` with no menu open jumps to the next snippet placeholder.
@@ -83,6 +84,7 @@ adjust it if Kakoune is installed elsewhere.
 | `bin/build-scls-kak` | builds the patched scls into `bin/scls-kak` (not tracked) |
 | `patches/scls-full-sync.patch` | the scls fix |
 | `patches/kak-tree-sitter-text-objects.patch` | the kak-tree-sitter text-object fixes |
+| `patches/kak-lsp-did-save.patch` | the kakoune-lsp didSave fix (efm diagnostics) |
 
 ## Notes
 
@@ -97,6 +99,11 @@ adjust it if Kakoune is installed elsewhere.
   `(_)+ @function.inside` kept only its first node. `patches/kak-tree-sitter-text-objects.patch`
   fixes both; apply it to the kak-tree-sitter source and `cargo install --path .`.
   Helix is unaffected (it does not use kak-tree-sitter).
+- **Patched kakoune-lsp.** kakoune-lsp 22.0.0 sends `didSave` only to servers whose
+  `textDocumentSync` lists a save option, so efm-langserver (which reports a bare
+  sync kind and lints on save) never ran gfortran. `patches/kak-lsp-did-save.patch`
+  sends it anyway, as Helix does; apply it to the kakoune-lsp source and
+  `cargo install --path .`.
 - **Snippet rewriting.** kakoune-lsp cannot expand nested placeholders, VSCode
   variables or regex transforms, so `bin/kak-snippet-flatten` flattens nesting,
   fills in date and file-name variables, and turns transforms into plain mirrors.
