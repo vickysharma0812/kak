@@ -222,7 +222,7 @@ map global normal <c-p> ':lsp-find-error --previous --include-warnings<ret>'
 # ─── completion & snippets ─────────────────────────────────────────────────────
 # Kakoune inserts the highlighted item as soon as you move to it (<tab>/<c-n>),
 # so there is no "accept" step. To match Helix:
-#   <tab> / <s-tab>   move through the completion menu
+#   <tab> / <s-tab>   move through the completion menu (also <down> / <up>)
 #   <ret>             accept: close the menu without a newline (only after you
 #                     picked an item; otherwise <ret> is a normal newline).
 #                     A snippet expands with its first placeholder selected.
@@ -234,11 +234,15 @@ hook global InsertCompletionShow .* %{
     set-option window completion_menu true
     map window insert <tab>   <c-n>
     map window insert <s-tab> <c-p>
+    map window insert <down>  <c-n>
+    map window insert <up>    <c-p>
 }
 hook global InsertCompletionHide .* %{
     set-option window completion_menu false
     unmap window insert <tab>
     unmap window insert <s-tab>
+    unmap window insert <down>
+    unmap window insert <up>
     unmap window insert <ret>
 }
 # Branch on the bool by command name (…-true / …-false) instead of a shell.
