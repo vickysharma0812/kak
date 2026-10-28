@@ -1,0 +1,276 @@
+diff --git a/src/kakoune/selection.rs b/src/kakoune/selection.rs
+index df73b79..eb165ad 100644
+--- a/src/kakoune/selection.rs
++++ b/src/kakoune/selection.rs
+@@ -6,6 +6,41 @@ use ropey::RopeSlice;
+ use serde::{Deserialize, Serialize};
+ use tree_house_bindings::Node;
+ 
++/// Anything with a tree-sitter byte range: a node, or a [`Span`] over several nodes.
++pub trait ByteRange {
++  fn start_byte(&self) -> u32;
++  fn end_byte(&self) -> u32;
++}
++
++impl ByteRange for Node<'_> {
++  fn start_byte(&self) -> u32 {
++    Node::start_byte(self)
++  }
++
++  fn end_byte(&self) -> u32 {
++    Node::end_byte(self)
++  }
++}
++
++/// Byte range of a text-object capture. A quantified capture such as
++/// `(_)+ @function.inside` matches several sibling nodes; the span covers them
++/// all, from the start of the first to the end of the last (as Helix does).
++#[derive(Clone, Copy, Debug)]
++pub struct Span {
++  pub start: u32,
++  pub end: u32,
++}
++
++impl ByteRange for Span {
++  fn start_byte(&self) -> u32 {
++    self.start
++  }
++
++  fn end_byte(&self) -> u32 {
++    self.end
++  }
++}
++
+ /// A single position in a buffer.
+ ///
+ /// Kakoune position _1-based_, while tree-sitter selections are _0-based_.
+@@ -44,6 +79,16 @@ impl Pos {
+     }
+   }
+ 
++  /// Position of the last byte of a node, for Kakoune's inclusive selections.
++  ///
++  /// tree-sitter ends are exclusive. Converting the end and then stepping back a
++  /// column breaks when a node ends at a line start (e.g. after the newline of
++  /// `end subroutine`): that yields column 0, which Kakoune rejects. Converting
++  /// the last byte instead selects up to and including that newline.
++  pub fn from_tree_sitter_end(buf: RopeSlice, start_byte: u32, end_byte: u32) -> Self {
++    Self::from_tree_sitter(buf, end_byte.saturating_sub(1).max(start_byte))
++  }
++
+   /// Convert a [`Pos`] into a byte representation (tree-sitter).
+   pub fn into_tree_sitter(self, buf: RopeSlice) -> usize {
+     buf.line_to_byte(self.line) + self.col
+@@ -113,17 +158,15 @@ impl Sel {
+   }
+ 
+   /// Same as [`Sel::replace`], but with a node’s content.
+-  pub fn replace_with_node(&self, buf: RopeSlice, node: &Node) -> Self {
+-    let mut b = Pos::from_tree_sitter(buf, node.end_byte() as _);
+-    b.col -= 1; // kakoune selections are inclusive
++  pub fn replace_with_node(&self, buf: RopeSlice, node: &impl ByteRange) -> Self {
++    let b = Pos::from_tree_sitter_end(buf, node.start_byte() as _, node.end_byte() as _);
+     self.replace(&Pos::from_tree_sitter(buf, node.start_byte() as _), &b)
+   }
+ 
+   /// Check whether a selection selects a node.
+-  pub fn selects(&self, buf: RopeSlice, node: &Node<'_>) -> bool {
++  pub fn selects(&self, buf: RopeSlice, node: &impl ByteRange) -> bool {
+     let start = Pos::from_tree_sitter(buf, node.start_byte() as _);
+-    let mut end = Pos::from_tree_sitter(buf, node.end_byte() as _);
+-    end.col -= 1;
++    let end = Pos::from_tree_sitter_end(buf, node.start_byte() as _, node.end_byte() as _);
+ 
+     if self.anchor <= self.cursor {
+       self.anchor <= start && self.cursor >= end
+@@ -133,10 +176,9 @@ impl Sel {
+   }
+ 
+   /// Check whether a selection fully selects a node.
+-  pub fn fully_selects(&self, buf: RopeSlice, node: &Node) -> bool {
++  pub fn fully_selects(&self, buf: RopeSlice, node: &impl ByteRange) -> bool {
+     let start = Pos::from_tree_sitter(buf, node.start_byte() as _);
+-    let mut end = Pos::from_tree_sitter(buf, node.end_byte() as _);
+-    end.col -= 1;
++    let end = Pos::from_tree_sitter_end(buf, node.start_byte() as _, node.end_byte() as _);
+ 
+     if self.anchor <= self.cursor {
+       self.anchor == start && self.cursor == end
+diff --git a/src/tree_sitter/state.rs b/src/tree_sitter/state.rs
+index 271da4f..5750ac8 100644
+--- a/src/tree_sitter/state.rs
++++ b/src/tree_sitter/state.rs
+@@ -13,7 +13,7 @@ use crate::{
+   error::OhNo,
+   kakoune::{
+     buffer::BufferId,
+-    selection::{ObjectFlags, Pos, Sel, SelectMode},
++    selection::{ByteRange, ObjectFlags, Pos, Sel, SelectMode, Span},
+     text_objects::OperationMode,
+   },
+   server::triple_buffer::TripleBufferReader,
+@@ -184,10 +184,17 @@ impl TreeState {
+         )
+         .map(|iter| {
+           iter.map(|captured| match captured {
+-            CapturedNode::Single(node) => node,
++            CapturedNode::Single(node) => Span {
++              start: node.start_byte(),
++              end: node.end_byte(),
++            },
+ 
++            // a quantified capture (e.g. `(_)+ @function.inside`) spans all its nodes;
+             // SAFETY: `nodes` is guaranteed to always have at least one node
+-            CapturedNode::Grouped(nodes) => nodes.into_iter().next().unwrap(),
++            CapturedNode::Grouped(nodes) => Span {
++              start: nodes.first().unwrap().start_byte(),
++              end: nodes.last().unwrap().end_byte(),
++            },
+           })
+         })
+         .ok_or(OhNo::UnknownTextObjectQuery {
+@@ -295,13 +302,12 @@ impl TreeState {
+   fn tree_sitter_search_next_text_object<'a>(
+     buf: RopeSlice,
+     sel: &Sel,
+-    nodes: impl Iterator<Item = Node<'a>>,
++    nodes: impl Iterator<Item = Span>,
+   ) -> Option<Sel> {
+     let p = sel.anchor.max(sel.cursor);
+     let node = Self::tree_sitter_node_after(buf, &p, nodes)?;
+     let start = Pos::from_tree_sitter(buf, node.start_byte());
+-    let mut end = Pos::from_tree_sitter(buf, node.end_byte());
+-    end.col -= 1;
++    let end = Pos::from_tree_sitter_end(buf, node.start_byte(), node.end_byte());
+ 
+     Some(sel.replace(&start, &end))
+   }
+@@ -310,13 +316,12 @@ impl TreeState {
+   fn tree_sitter_search_prev_text_object<'a>(
+     buf: RopeSlice,
+     sel: &Sel,
+-    nodes: impl Iterator<Item = Node<'a>>,
++    nodes: impl Iterator<Item = Span>,
+   ) -> Option<Sel> {
+     let p = sel.anchor.min(sel.cursor);
+     let node = Self::tree_sitter_node_before(buf, &p, nodes)?;
+     let start = Pos::from_tree_sitter(buf, node.start_byte());
+-    let mut end = Pos::from_tree_sitter(buf, node.end_byte());
+-    end.col -= 1;
++    let end = Pos::from_tree_sitter_end(buf, node.start_byte(), node.end_byte());
+ 
+     Some(sel.replace(&start, &end))
+   }
+@@ -325,7 +330,7 @@ impl TreeState {
+   fn tree_sitter_search_extend_next_text_object<'a>(
+     buf: RopeSlice,
+     sel: &Sel,
+-    nodes: impl Iterator<Item = Node<'a>>,
++    nodes: impl Iterator<Item = Span>,
+   ) -> Option<Sel> {
+     let node = Self::tree_sitter_node_after(buf, &sel.cursor, nodes)?;
+     let cursor = Pos::from_tree_sitter(buf, node.start_byte());
+@@ -340,7 +345,7 @@ impl TreeState {
+   fn tree_sitter_search_extend_prev_text_object<'a>(
+     buf: RopeSlice,
+     sel: &Sel,
+-    nodes: impl Iterator<Item = Node<'a>>,
++    nodes: impl Iterator<Item = Span>,
+   ) -> Option<Sel> {
+     let node = Self::tree_sitter_node_before(buf, &sel.cursor, nodes)?;
+     let cursor = Pos::from_tree_sitter(buf, node.start_byte());
+@@ -355,7 +360,7 @@ impl TreeState {
+   fn tree_sitter_find_text_object<'a>(
+     buf: RopeSlice,
+     sel: &Sel,
+-    nodes: impl Iterator<Item = Node<'a>>,
++    nodes: impl Iterator<Item = Span>,
+     is_prev: bool,
+   ) -> Option<Sel> {
+     let node = if is_prev {
+@@ -373,7 +378,7 @@ impl TreeState {
+   fn tree_sitter_extend_text_object<'node>(
+     buf: RopeSlice,
+     sel: &Sel,
+-    nodes: impl Iterator<Item = Node<'node>>,
++    nodes: impl Iterator<Item = Span>,
+     is_prev: bool,
+   ) -> Option<Sel> {
+     let node = if is_prev {
+@@ -391,7 +396,7 @@ impl TreeState {
+   fn tree_sitter_select_text_object<'node>(
+     buf: RopeSlice,
+     sel: &Sel,
+-    nodes: impl Iterator<Item = Node<'node>>,
++    nodes: impl Iterator<Item = Span>,
+   ) -> impl Iterator<Item = Sel> {
+     nodes
+       .filter(move |node| sel.selects(buf, node))
+@@ -409,7 +414,7 @@ impl TreeState {
+   fn tree_sitter_object_text_object<'node>(
+     buf: RopeSlice,
+     sel: &Sel,
+-    nodes: impl Iterator<Item = Node<'node>>,
++    nodes: impl Iterator<Item = Span>,
+     mode: SelectMode,
+     flags: ObjectFlags,
+   ) -> Option<Sel> {
+@@ -422,8 +427,7 @@ impl TreeState {
+         let cursor = if flags.to_begin {
+           Pos::from_tree_sitter(buf, node.start_byte())
+         } else if flags.to_end {
+-          let mut p = Pos::from_tree_sitter(buf, node.end_byte());
+-          p.col -= 1;
++          let p = Pos::from_tree_sitter_end(buf, node.start_byte(), node.end_byte());
+           p
+         } else {
+           return None;
+@@ -440,13 +444,11 @@ impl TreeState {
+           Some(Sel { anchor, cursor })
+         } else if !flags.to_begin && flags.to_end {
+           let anchor = sel.cursor;
+-          let mut cursor = Pos::from_tree_sitter(buf, node.end_byte());
+-          cursor.col -= 1;
++          let cursor = Pos::from_tree_sitter_end(buf, node.start_byte(), node.end_byte());
+           Some(Sel { anchor, cursor })
+         } else if flags.to_begin && flags.to_end {
+           let anchor = Pos::from_tree_sitter(buf, node.start_byte());
+-          let mut cursor = Pos::from_tree_sitter(buf, node.end_byte());
+-          cursor.col -= 1;
++          let cursor = Pos::from_tree_sitter_end(buf, node.start_byte(), node.end_byte());
+           Some(Sel { anchor, cursor })
+         } else {
+           None
+@@ -459,8 +461,8 @@ impl TreeState {
+   fn tree_sitter_node_after<'a>(
+     buf: RopeSlice,
+     p: &Pos,
+-    nodes: impl Iterator<Item = Node<'a>>,
+-  ) -> Option<Node<'a>> {
++    nodes: impl Iterator<Item = Span>,
++  ) -> Option<Span> {
+     let mut candidates = nodes
+       .filter(|node| &Pos::from_tree_sitter(buf, node.start_byte()) > p)
+       .collect::<Vec<_>>();
+@@ -473,8 +475,8 @@ impl TreeState {
+   fn tree_sitter_node_before<'a>(
+     buf: RopeSlice,
+     p: &Pos,
+-    nodes: impl Iterator<Item = Node<'a>>,
+-  ) -> Option<Node<'a>> {
++    nodes: impl Iterator<Item = Span>,
++  ) -> Option<Span> {
+     let mut candidates = nodes
+       .filter(|node| &Pos::from_tree_sitter(buf, node.start_byte()) < p)
+       .collect::<Vec<_>>();
+@@ -487,8 +489,8 @@ impl TreeState {
+   fn tree_sitter_narrowest_enclosing_node<'a>(
+     buf: RopeSlice,
+     p: &Pos,
+-    nodes: impl Iterator<Item = Node<'a>>,
+-  ) -> Option<Node<'a>> {
++    nodes: impl Iterator<Item = Span>,
++  ) -> Option<Span> {
+     let mut candidates = nodes
+       .filter(|node| {
+         &Pos::from_tree_sitter(buf, node.start_byte()) < p

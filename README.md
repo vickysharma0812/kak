@@ -25,7 +25,7 @@ formatters, tree-sitter grammar, theme and space-leader keys.
 - **Snippets**: VSCode-style snippets from `$SNIPPETS_PATH`, shared with Helix and
   Neovim, served by a patched simple-completion-language-server (see below).
 - **Pickers** in tmux popups: fzf for files, live grep and buffers, plus yazi.
-- **Helix-like completion**: `<tab>`/`<s-tab>` move through the menu, `<ret>` accepts.
+- **Helix-like completion**: `<tab>`/`<s-tab>` or `<down>`/`<up>` move through the menu, `<ret>` accepts.
 - Catppuccin Mocha theme matching Helix's, and a Helix-style modeline.
 
 ## Keys
@@ -46,7 +46,7 @@ formatters, tree-sitter grammar, theme and space-leader keys.
 | `<space>g` | lazygit | `<space>+` | easifem build (`b`, `c`) and run test (`+`) |
 | `<space>p` / `<space>P` | paste from clipboard | | |
 
-In insert mode: `<tab>`/`<s-tab>` move through the completion menu, `<ret>` accepts
+In insert mode: `<tab>`/`<s-tab>` or `<down>`/`<up>` move through the completion menu, `<ret>` accepts
 the picked item, and `<tab>` with no menu open jumps to the next snippet placeholder.
 
 ## Requirements
@@ -82,6 +82,7 @@ adjust it if Kakoune is installed elsewhere.
 | `bin/kak-snippet-flatten` | rewrites VSCode snippets into what kak-lsp can expand |
 | `bin/build-scls-kak` | builds the patched scls into `bin/scls-kak` (not tracked) |
 | `patches/scls-full-sync.patch` | the scls fix |
+| `patches/kak-tree-sitter-text-objects.patch` | the kak-tree-sitter text-object fixes |
 
 ## Notes
 
@@ -90,6 +91,12 @@ adjust it if Kakoune is installed elsewhere.
   snippets in Kakoune. `bin/build-scls-kak` builds a Kakoune-only copy with the fix;
   Helix keeps using the stock binary. Reported upstream as
   [estin/simple-completion-language-server#238](https://github.com/estin/simple-completion-language-server/issues/238).
+- **Patched kak-tree-sitter.** Two text-object bugs in kak-tree-sitter 3.2.2 broke
+  `<a-i>f` / `<a-a>f` on Fortran procedures: a node ending at a line start became
+  an invalid `line.0` position, and a quantified capture such as
+  `(_)+ @function.inside` kept only its first node. `patches/kak-tree-sitter-text-objects.patch`
+  fixes both; apply it to the kak-tree-sitter source and `cargo install --path .`.
+  Helix is unaffected (it does not use kak-tree-sitter).
 - **Snippet rewriting.** kakoune-lsp cannot expand nested placeholders, VSCode
   variables or regex transforms, so `bin/kak-snippet-flatten` flattens nesting,
   fills in date and file-name variables, and turns transforms into plain mirrors.

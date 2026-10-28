@@ -80,6 +80,42 @@ Add Shift to extend instead: `W`, `J`, `L`, `F<c>`, `M`, `G`, etc.
 In this config, `s`, `S`, `<a-k>`, `<a-K>` and the search prompts start with
 `(?i)`, so matching **ignores case** (like Helix). Delete `(?i)` for exact case.
 
+### Selecting a function or subroutine
+
+| Key | Action |
+|---|---|
+| `<a-i>f` | the body of the procedure around the cursor |
+| `<a-a>f` | the whole procedure, from `subroutine`/`function` to `end ...` |
+| `[f` / `]f` | extend to the start / end of the procedure |
+| `<a-i>t` / `<a-a>t` | inside / whole module, program or derived type |
+| `<space>t` then `/f` / `<a-/>f` | jump to the next / previous procedure |
+
+These use tree-sitter (via a patched kak-tree-sitter, see the README).
+
+### Selecting a whole block (e.g. a `do` loop)
+
+The custom object `c` takes an opening and a closing regex, separated by a comma,
+and selects the block around the cursor. It understands nesting.
+
+Select the whole `do ... end do` loop:
+
+```
+<a-a>c(?i)^\h*(?:\w+\h*:\h*)?do\b,(?i)^\h*end\h*do\b<ret>
+```
+
+- `<a-a>c...` selects the whole loop as full lines; `<a-i>c...` only its body.
+- Works from anywhere in the loop: its body, the `do` keyword or the `end do` line.
+  The cursor must be on or after `do`, not in the indentation before it.
+- Nested loops: from an inner loop it selects that loop; repeat it to grow to
+  the outer loop.
+- `(?i)` matches `DO` / `END DO` too (fprettier writes them in upper case), and
+  `(?:\w+\h*:\h*)?` allows named loops (`outer: do`).
+- The same recipe works for other blocks: put that block's opening and closing
+  keywords in place of `do` and `end\h*do`.
+
+Tree-sitter's `<a-up>` (select parent node) is not reliable for this: from an
+inner loop it jumps straight to the outer one.
+
 ## Editing
 
 | Key | Action |
@@ -154,7 +190,8 @@ In this config, `s`, `S`, `<a-k>`, `<a-K>` and the search prompts start with
 
 In insert mode the menu appears as you type:
 
-- `<tab>` / `<s-tab>` (or `<c-n>` / `<c-p>`): move through the menu
+- `<tab>` / `<s-tab>`, `<down>` / `<up>` (or `<c-n>` / `<c-p>`): move through
+  the menu; with no menu open the arrows move the cursor as usual
 - `<ret>`: accept the picked item (no newline); a snippet expands with its first
   placeholder selected
 - `<tab>` with no menu open: jump to the next snippet placeholder; typing
@@ -197,6 +234,8 @@ for s in (kak -l); echo kill | kak -p $s; end
 ## Troubleshooting
 
 - **Errors or LSP messages**: `:buffer *debug*`
+- **`<a-i>f` / `<a-a>f` do nothing**: `kak-tree-sitter` was reinstalled without
+  `patches/kak-tree-sitter-text-objects.patch`; rebuild it with the patch
 - **No Fortran highlighting**: restart the tree-sitter server, then restart Kakoune:
   `kill (cat $TMPDIR/kak-tree-sitter/pid)`
 - **No snippets**: start Kakoune from fish (it sets `SNIPPETS_PATH`), and check
