@@ -30,6 +30,17 @@ set-option global indentwidth 2
 set-option global autowrap_column 78
 set-option global grepcmd 'rg --column --smart-case'
 
+# Case-insensitive select and search, like Helix: each regex prompt starts with
+# (?i). Delete it for an exact-case match.
+map global normal s     's(?i)'
+map global normal S     'S(?i)'
+map global normal <a-k> '<a-k>(?i)'
+map global normal <a-K> '<a-K>(?i)'
+map global normal /     '/(?i)'
+map global normal ?     '?(?i)'
+map global normal <a-/> '<a-/>(?i)'
+map global normal <a-?> '<a-?>(?i)'
+
 add-highlighter global/ number-lines -relative -hlcursor -separator ' '
 add-highlighter global/ show-matching
 add-highlighter global/ wrap -word -indent -marker '↪ '
