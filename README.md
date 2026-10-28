@@ -24,7 +24,7 @@ formatters, tree-sitter grammar, theme and space-leader keys.
 
 - **Snippets**: VSCode-style snippets from `$SNIPPETS_PATH`, shared with Helix and
   Neovim, served by a patched simple-completion-language-server (see below).
-- **Pickers** in tmux popups: fzf for files, live grep and buffers, plus yazi.
+- **Pickers** in tmux popups: fzf for files, live grep and buffers, plus yazi and broot.
 - **Helix-like completion**: `<tab>`/`<s-tab>` or `<down>`/`<up>` move through the menu, `<ret>` accepts.
 - Catppuccin Mocha theme matching Helix's, and a Helix-style modeline.
 
@@ -35,7 +35,7 @@ formatters, tree-sitter grammar, theme and space-leader keys.
 | Key | Action | Key | Action |
 |---|---|---|---|
 | `<space>f` | files | `<space>/` | live grep |
-| `<space>,` | buffer picker | `<space>e` | yazi |
+| `<space>,` | buffer picker | `<space>e` / `<space>E` | yazi / broot |
 | `<space>b` | buffer mode | `gn` / `gp` / `ga` | next / previous / last buffer |
 | `<space>k` | hover | `<space>a` | code action |
 | `<space>r` | rename | `<space>d` | diagnostics |
@@ -57,7 +57,7 @@ from **fish** (which sets `SNIPPETS_PATH`).
 
 - Kakoune, plus `cargo install kak-lsp kak-tree-sitter ktsctl`
 - The language servers and formatters in the table above
-- `fd`, `ripgrep`, `fzf`, `bat`, `yazi`, `lazygit`, `perl`
+- `fd`, `ripgrep`, `fzf`, `bat`, `yazi`, `broot`, `lazygit`, `perl`
 - Helix with its Fortran grammar built (`hx --grammar build`): kak-tree-sitter reads
   `~/.config/helix/runtime/grammars/fortran.so` and the queries next to it.
 
@@ -79,7 +79,8 @@ adjust it if Kakoune is installed elsewhere.
 | `kak-tree-sitter.toml` | kak-tree-sitter config (Fortran grammar from Helix) |
 | `autoload/fortran.kak` | Fortran filetype and indentation |
 | `colors/catppuccin-mocha.kak` | theme, including tree-sitter faces |
-| `bin/kak-picker` | fzf and yazi pickers in tmux popups |
+| `bin/kak-picker` | fzf, yazi and broot pickers in tmux popups |
+| `broot/kak.hjson` | broot verb for the picker: `<ret>` on a file opens it in Kakoune |
 | `bin/kak-snippet-flatten` | rewrites VSCode snippets into what kak-lsp can expand |
 | `bin/build-scls-kak` | builds the patched scls into `bin/scls-kak` (not tracked) |
 | `patches/scls-full-sync.patch` | the scls fix |

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # fzf pickers for Kakoune, run inside a tmux popup.
-# usage: kak-picker <session> <client> <files|grep|buffers|yazi> [list-file|start-path]
+# usage: kak-picker <session> <client> <files|grep|buffers|yazi|broot> [list-file|start-path]
 # The choice is sent back to the Kakoune client with `kak -p`.
 
 session=$1 client=$2 mode=$3 list=$4
@@ -65,5 +65,12 @@ yazi)
         [ -f "$f" ] && send "edit -existing $(kq "$f")"
     done <"$chosen"
     rm -f "$chosen" "$chosen.done"
+    ;;
+broot)
+    # $4 is the directory broot starts in. broot draws on stderr and prints
+    # the path chosen with <ret> (see broot/kak.hjson) on stdout.
+    conf="$HOME/.config/broot/conf.hjson;$(dirname "$0")/../broot/kak.hjson"
+    sel=$(broot --conf "$conf" "$list") || exit 0
+    [ -f "$sel" ] && send "edit -existing $(kq "$sel")"
     ;;
 esac

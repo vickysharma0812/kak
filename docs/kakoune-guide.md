@@ -283,6 +283,7 @@ Registers worth knowing: `"` last yank/delete, `/` last search, `@` last macro,
 |---|---|
 | `<space>f` | find a file (fzf) |
 | `<space>e` | yazi: pick a file, `<ret>` opens it in this session |
+| `<space>E` | broot: type to filter the tree, `<ret>` on a file opens it (on a folder, enters it); `<esc>` goes back / quits |
 | `<space>,` | pick an open buffer |
 | `gn` / `gp` / `ga` | next / previous / last buffer |
 | `<space>b` | buffer menu: `q` close, `Q` close and discard, `o` close others, `w` / `W` write / write all |

@@ -1,0 +1,10 @@
+# Loaded after ~/.config/broot/conf.hjson when broot is Kakoune's picker
+# (<space>E): <ret> on a file prints its path and quits, and kak-picker opens
+# that file in the session. Directories still open in broot as usual.
+verbs: [
+    {
+        key: enter
+        apply_to: file
+        internal: ":print_path"
+    }
+]

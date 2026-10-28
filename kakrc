@@ -405,6 +405,11 @@ define-command yazi -docstring 'yazi file manager; opens the chosen file(s)' %{ 
     if [ -f "$kak_buffile" ]; then start=$kak_buffile; else start=$PWD; fi
     printf "picker-popup yazi '%s'\n" "$(printf %s "$start" | sed "s/'/''/g")"
 } }
+define-command broot -docstring 'broot file tree; <ret> opens the file' %{ evaluate-commands %sh{
+    # start in the current file's directory; fall back to the cwd
+    if [ -f "$kak_buffile" ]; then start=${kak_buffile%/*}; else start=$PWD; fi
+    printf "picker-popup broot '%s'\n" "$(printf %s "$start" | sed "s/'/''/g")"
+} }
 define-command picker-buffers -docstring 'pick a buffer' %{ evaluate-commands %sh{
     list=$(mktemp "${TMPDIR:-/tmp}/kak-buffers.XXXXXX")
     eval set -- "$kak_quoted_buflist"
@@ -416,6 +421,7 @@ map global user f ':picker-files<ret>'   -docstring 'files'
 map global user / ':picker-grep<ret>'    -docstring 'live grep'
 map global user , ':picker-buffers<ret>' -docstring 'buffer picker'
 map global user e ':yazi<ret>'           -docstring 'yazi file manager'
+map global user E ':broot<ret>'          -docstring 'broot file tree'
 
 # ─── buffers ──────────────────────────────────────────────────────────────────
 # ga (last buffer) is built in; gn / gp match Helix.
