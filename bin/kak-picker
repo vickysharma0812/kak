@@ -39,10 +39,31 @@ yazi)
     # $4 is where yazi starts (the current file, or the cwd). Every chosen
     # file is opened; the last one is shown.
     chosen=$(mktemp "${TMPDIR:-/tmp}/kak-yazi.XXXXXX")
+    # yazi writes the chooser file on <Enter>/open but keeps running, so watch
+    # for it, keep a copy, and close yazi as soon as something is chosen.
+    # (SIGKILL: on SIGTERM yazi empties the chooser file and does not exit.)
+    (
+        i=0   # wait for yazi to start
+        until pgrep -qf -- "--chooser-file=$chosen"; do
+            i=$((i + 1)); [ $i -gt 50 ] && exit 0
+            sleep 0.1
+        done
+        while [ ! -s "$chosen" ]; do
+            pgrep -qf -- "--chooser-file=$chosen" || exit 0
+            sleep 0.1
+        done
+        sleep 0.1
+        cp "$chosen" "$chosen.done"
+        pkill -KILL -f -- "--chooser-file=$chosen"
+    ) &
+    watcher=$!
     yazi "$list" --chooser-file="$chosen"
-    while IFS= read -r f; do
+    kill "$watcher" 2>/dev/null
+    [ -s "$chosen.done" ] && mv "$chosen.done" "$chosen"
+    # (yazi writes no trailing newline, hence the || [ -n "$f" ])
+    while IFS= read -r f || [ -n "$f" ]; do
         [ -f "$f" ] && send "edit -existing $(kq "$f")"
     done <"$chosen"
-    rm -f "$chosen"
+    rm -f "$chosen" "$chosen.done"
     ;;
 esac
