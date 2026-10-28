@@ -42,8 +42,9 @@ hook global InsertChar \t %{ execute-keys -draft h@ }
 hook global BufWritePre .* %{ try %{ execute-keys -draft '%s\h+$<ret>d' } }
 
 # ─── clipboard (macOS) ────────────────────────────────────────────────────────
+# pbcopy runs in the background so yanks and deletes never wait on it
 hook global RegisterModified '"' %{ nop %sh{
-    printf %s "$kak_main_reg_dquote" | pbcopy
+    { printf %s "$kak_main_reg_dquote" | pbcopy; } >/dev/null 2>&1 </dev/null &
 } }
 map global user p '!pbpaste<ret>'     -docstring 'paste after from clipboard'
 map global user P '<a-!>pbpaste<ret>' -docstring 'paste before from clipboard'
@@ -192,6 +193,8 @@ hook global BufSetOption filetype=bibtex %{
 
 hook global WinSetOption filetype=(fortran|cmake|toml|markdown|latex|bibtex) %{
     lsp-enable-window
+    # no breadcrumbs (Helix has none): saves a documentSymbol request per idle
+    remove-hooks window lsp-breadcrumbs
     lsp-inlay-diagnostics-enable window
     lsp-inlay-hints-enable window
 }
@@ -233,11 +236,14 @@ hook global InsertCompletionHide .* %{
     unmap window insert <s-tab>
     unmap window insert <ret>
 }
+# Branch on the bool by command name (…-true / …-false) instead of a shell.
 hook global InsertKey (<tab>|<s-tab>|<c-n>|<c-p>|<down>|<up>) %{
-    evaluate-commands %sh{
-        [ "$kak_opt_completion_menu" = true ] && echo "map window insert <ret> '<a-;>:completion-accept<ret><c-o><c-o><a-;>:completion-arm-resume<ret>'"
-    }
+    evaluate-commands "completion-arm-enter-%opt{completion_menu}"
 }
+define-command -hidden completion-arm-enter-true %{
+    map window insert <ret> '<a-;>:completion-accept<ret><c-o><c-o><a-;>:completion-arm-resume<ret>'
+}
+define-command -hidden completion-arm-enter-false nop
 
 # Accept = close the menu (<c-o><c-o>), but first switch completers off until the
 # next typed character; otherwise LSP completion reopens the menu immediately.
@@ -302,11 +308,11 @@ define-command -hidden snippet-placeholder-clear %{
 }
 define-command -hidden snippet-placeholder-restore %{
     remove-hooks window snippet-typed
-    evaluate-commands %sh{
-        [ "$kak_opt_snippet_default_saved" = true ] && echo "execute-keys -draft '\"pP'"
-    }
+    evaluate-commands "snippet-placeholder-restore-%opt{snippet_default_saved}"
     set-option window snippet_default_saved false
 }
+define-command -hidden snippet-placeholder-restore-true %{ execute-keys -draft '"pP' }
+define-command -hidden snippet-placeholder-restore-false nop
 define-command -hidden snippet-next %{
     snippet-placeholder-restore
     try lsp-snippets-select-next-placeholders catch %{ execute-keys -with-hooks <tab> }
