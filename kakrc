@@ -5,10 +5,11 @@
 #   <space>f  files          <space>/  live grep       <space>,  buffer picker
 #   <space>e  yazi
 #   <space>b  buffer mode    gn / gp   next / prev buffer   ga  last buffer
-#   <space>s  doc symbols    <space>S  workspace syms  <space>d  diagnostics
+#   <space>s  goto symbol    <space>S  workspace syms  <space>d  diagnostics
 #   <space>a  code action    <space>r  rename          <space>k  hover
 #   <space>=  format         <space>c  comment         <space>t  tree-sitter
-#   <space>l  all LSP cmds   <space>g  lazygit         <space>+  easifem build/test
+#   <space>l  all LSP cmds (l s goto symbol, l S symbol list)
+#   <space>g  lazygit        <space>+  easifem build/test
 #   gd / gr / gy             definition / references / type definition
 
 # ─── tree-sitter ──────────────────────────────────────────────────────────────
@@ -231,7 +232,7 @@ map global user k ':lsp-hover<ret>'                     -docstring 'hover'
 map global user a ':lsp-code-actions<ret>'              -docstring 'code action'
 map global user r ':lsp-rename-prompt<ret>'             -docstring 'rename'
 map global user d ':lsp-diagnostics<ret>'               -docstring 'diagnostics'
-map global user s ':lsp-document-symbol<ret>'           -docstring 'document symbols'
+map global user s ':lsp-goto-document-symbol<ret>'      -docstring 'goto symbol'
 map global user S ':lsp-workspace-symbol-incr<ret>'     -docstring 'workspace symbols'
 map global goto d '<esc>:lsp-definition<ret>'           -docstring 'definition (LSP)'
 map global goto r '<esc>:lsp-references<ret>'           -docstring 'references (LSP)'
@@ -573,6 +574,41 @@ define-command -hidden surround-replace -params 2 %{
         execute-keys R
     }
 }
+
+# ─── auto pairs (like Helix) ──────────────────────────────────────────────────
+# Typing ( [ { " ' ` inserts the closing character too, when the next character
+# is a space, the end of the line or a closing bracket (quotes also need no
+# letter or digit just before them, so "don't" stays as typed). Typing the
+# closing character steps over it, and <backspace> on the opening one of an
+# empty pair deletes both. Turn it off with :remove-hooks global auto-pairs.
+# In these hooks the cursor is on the character after the one just typed.
+# \x7D stands for a closing brace, which would end the %{...} block.
+define-command -hidden auto-pairs-open -params 2 %{
+    try %{
+        execute-keys -draft ';<a-k>[\s)\]\x7D]<ret>'
+        execute-keys "%arg{2}<left>"
+    }
+}
+define-command -hidden auto-pairs-skip -params 1 %{
+    execute-keys -draft ";<a-k>\Q%arg{1}<ret>d"
+}
+define-command -hidden auto-pairs-quote -params 1 %{
+    try %{
+        auto-pairs-skip %arg{1}
+    } catch %{
+        execute-keys -draft ';hh<a-K>\w<ret>'
+        auto-pairs-open %arg{1} %arg{1}
+    } catch %{}
+}
+hook -group auto-pairs global InsertChar \( %{ auto-pairs-open ( ) }
+hook -group auto-pairs global InsertChar \[ %{ auto-pairs-open [ ] }
+hook -group auto-pairs global InsertChar \{ %{ auto-pairs-open { } }
+hook -group auto-pairs global InsertChar '[)\]}]' %{ try %{ auto-pairs-skip %val{hook_param} } }
+hook -group auto-pairs global InsertChar '["''`]' %{ auto-pairs-quote %val{hook_param} }
+hook -group auto-pairs global InsertDelete \( %{ try %{ auto-pairs-skip ) } }
+hook -group auto-pairs global InsertDelete \[ %{ try %{ auto-pairs-skip ] } }
+hook -group auto-pairs global InsertDelete \{ %[ try %[ auto-pairs-skip '}' ] ]
+hook -group auto-pairs global InsertDelete '["''`]' %{ try %{ auto-pairs-skip %val{hook_param} } }
 
 # ─── modeline / prompt ────────────────────────────────────────────────────────
 # Helix-style: coloured mode badge, file, LSP status, diagnostics, position.

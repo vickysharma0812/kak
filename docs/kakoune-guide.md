@@ -61,7 +61,7 @@ Most keys are the same (`w` `b` `e` `f` `t` `x` `%` `s` `S` `C` `,` `;` `&` `|`
 | `K` / `<a-K>` | `<a-k>` / `<a-K>` | keep / drop selections matching a regex |
 | `N` | `<a-n>` | `N` **adds** the next match as a new selection |
 | `?` | `<a-/>` | `?` extends the selection to the next match |
-| `~` (switch case) | `<a-`>` | Kakoune's `~` is upper case |
+| `~` (switch case) | `<a-`>` | Kakoune's `~` is upper case |  |
 | `<a-o>` / `<a-i>` (syntax) | `<a-up>` / `<a-down>` | `<a-i>` is "inside object" |
 | `z` view mode, `zz` | `v` view mode, `vv` | |
 | `gs` | `gi` | first non-blank character |
@@ -72,6 +72,7 @@ Most keys are the same (`w` `b` `e` `f` `t` `x` `%` `s` `S` `C` `,` `;` `&` `|`
 | `:bc` | `:db` or `<space>b` `q` | close the buffer |
 | `gw` (jump labels) | — | use `/`, `f`, or `<number>g` |
 | `mm` `ms` `mr` `md` `mi` `ma` | same | added in this config (see [Surround](#surround-helixs-m-mode)) |
+| auto pairs | same | added in this config (see [Auto pairs](#auto-pairs)) |
 
 ## Modes
 
@@ -177,7 +178,7 @@ and selects the block around the cursor. It understands nesting.
 
 Select the whole `do ... end do` loop:
 
-```
+```text
 <a-a>c(?i)^\h*(?:\w+\h*:\h*)?do\b,(?i)^\h*end\h*do\b<ret>
 ```
 
@@ -231,6 +232,22 @@ inner loop it jumps straight to the outer one.
 includes the new pair, as in Helix, so `ms(` `ireal<esc>` gives `real(foo)`.
 `mr` / `md` work on the
 pair around the cursor, with multiple cursors too; one `u` undoes the change.
+
+## Auto pairs
+
+In insert mode, as in Helix:
+
+- Typing `(` `[` `{` `"` `'` or `` ` `` also inserts the closing character, with
+  the cursor between them: `(` gives `(|)`.
+- This only happens when the next character is a space, the end of the line or a
+  closing bracket, so typing `(` just before a word does not add a `)`.
+- A quote also needs no letter or digit just before it, so `don't` and Fortran's
+  `'it''s'` come out as typed.
+- Typing the closing character when it is already next steps over it, so typing
+  `()` or `"hi"` in full gives the same text as before.
+- `<backspace>` on the opening character of an empty pair deletes both.
+
+To turn it off until you restart Kakoune, run `:remove-hooks global auto-pairs`.
 
 ## Search
 
@@ -304,9 +321,10 @@ Registers worth knowing: `"` last yank/delete, `/` last search, `@` last macro,
 | `<space>r` | rename |
 | `<space>d` | diagnostics list |
 | `<c-n>` / `<c-p>` | next / previous error or warning |
-| `<space>s` / `<space>S` | document / workspace symbols |
+| `<space>s` | goto symbol: type part of a name, `<tab>` through matches, `<ret>` jumps (no list buffer) |
+| `<space>S` | workspace symbols |
 | `<space>=` | format the buffer (also runs on every save) |
-| `<space>l` | all LSP commands |
+| `<space>l` | all LSP commands; `<space>l s` is goto symbol, `<space>l S` lists the document's symbols in a buffer |
 | `<space>t` | tree-sitter menu (`f` function, `a` parameter, `t` type, `c` comment) |
 | `<a-up>` / `<a-down>` | select the parent / child syntax node |
 
@@ -333,7 +351,7 @@ No preview: Markdown is edited as text, with the same help as in Helix.
 - **Soft wrap**: long lines wrap at word boundaries, `↪` marks a wrapped line.
   It is display only; the file keeps one long line per paragraph.
 - **marksman** (LSP): `gd` on a link jumps to its target heading or file,
-  `<space>s` lists the headings, completion suggests headings and files in links.
+  `<space>s` jumps to a heading, completion suggests headings and files in links.
 - **rumdl** (LSP): lint warnings as you type (`<space>d` lists them), and it
   formats the file on save (`<space>=` to format now).
 - Snippets from `~/.config/nvim/snippets` work as in Fortran.

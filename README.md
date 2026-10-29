@@ -27,6 +27,8 @@ formatters, tree-sitter grammar, theme and space-leader keys.
 - **Snippets**: VSCode-style snippets from `$SNIPPETS_PATH`, shared with Helix and
   Neovim, served by a patched simple-completion-language-server (see below).
 - **Pickers** in tmux popups: fzf for files, live grep and buffers, plus yazi and broot.
+- **Auto pairs** like Helix: brackets and quotes close themselves, the closing
+  character is stepped over, and `<backspace>` deletes an empty pair.
 - **Helix-like completion**: `<tab>`/`<s-tab>` or `<down>`/`<up>` move through the menu, `<ret>` accepts.
 - **Git signs**: added / changed / deleted line marks (like gitsigns), hunk jumps,
   stage / revert selected lines and blame, using Kakoune's built-in `git` command.
@@ -43,8 +45,8 @@ formatters, tree-sitter grammar, theme and space-leader keys.
 | `<space>b` | buffer mode | `gn` / `gp` / `ga` | next / previous / last buffer |
 | `<space>k` | hover | `<space>a` | code action |
 | `<space>r` | rename | `<space>d` | diagnostics |
-| `<space>s` / `<space>S` | document / workspace symbols | `<c-n>` / `<c-p>` | next / previous diagnostic |
-| `gd` / `gr` / `gy` | definition / references / type definition | `<space>l` | all LSP commands |
+| `<space>s` / `<space>S` | goto symbol (prompt) / workspace symbols | `<c-n>` / `<c-p>` | next / previous diagnostic |
+| `gd` / `gr` / `gy` | definition / references / type definition | `<space>l` | all LSP commands (`s` goto symbol, `S` symbol list) |
 | `<space>=` | format | `<space>c` | comment lines |
 | `<space>t` | tree-sitter menu | `<a-up>` / `<a-down>` | select parent / child node |
 | `<space>g` | lazygit | `<space>+` | easifem background build (`b`, `c`), build log (`l`), run test (`+`) |
