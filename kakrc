@@ -465,9 +465,9 @@ define-command -hidden popup -params 1.. -docstring 'run a command in a tmux pop
 } }
 
 define-command lazygit -docstring 'lazygit in a popup' %{
-    # refresh the branch in the status line when lazygit exits
+    # refresh the branch and the diff gutter when lazygit exits
     popup sh -c %sh{
-        printf 'lazygit; echo "evaluate-commands -client %s modeline-update-branch" | kak -p %s' "$kak_client" "$kak_session"
+        printf 'lazygit; echo "evaluate-commands -client %s git-refresh" | kak -p %s' "$kak_client" "$kak_session"
     }
 }
 
@@ -582,9 +582,41 @@ define-command -hidden modeline-update-branch %{
         [ -n "$b" ] && printf ' %s ' "$b"
     }
 }
-hook global WinDisplay .* modeline-update-branch
-hook global FocusIn    .* modeline-update-branch
+hook global WinDisplay .* git-refresh
+hook global FocusIn    .* git-refresh
 
 set-option global modelinefmt '{ModelineMode} %opt{modeline_mode} {StatusLine} {StatusLineInfo}%opt{modeline_bufname}{StatusLine} {ModelineBranch}%opt{modeline_branch}{StatusLine}{{context_info}} {{mode_info}} '
 set-option -add global modelinefmt %opt{lsp_modeline}
 set-option -add global modelinefmt ' {ModelineError}● %opt{lsp_diagnostic_error_count} {ModelineWarning}▲ %opt{lsp_diagnostic_warning_count}{StatusLine}  {StatusLineValue}%val{cursor_line}:%val{cursor_char_column}{StatusLine}  {ModelineDim}%opt{filetype} '
+
+# ─── git signs (like gitsigns / Helix's diff gutter) ──────────────────────────
+# Kakoune's stdlib `git` command does the work: show-diff marks added (green),
+# changed (blue) and deleted (red) lines against the index, so staging a change
+# clears its marks. Files outside a repo (empty branch) are skipped.
+define-command -hidden git-refresh %{
+    modeline-update-branch
+    evaluate-commands %sh{ [ -n "$kak_opt_modeline_branch" ] && echo 'git show-diff' }
+}
+define-command -hidden gitsigns-update %{
+    evaluate-commands %sh{ [ -n "$kak_opt_modeline_branch" ] && echo 'git update-diff' }
+}
+hook global BufWritePost .*                %{ gitsigns-update }
+hook global ModeChange   pop:insert:normal %{ gitsigns-update }
+
+# Revert rewrites the file from git, so unsaved edits would be mixed in.
+define-command -hidden gitsigns-revert %{
+    evaluate-commands %sh{ [ "$kak_modified" = true ] && echo "fail 'git: save the buffer first'" }
+    git apply --reverse
+}
+
+declare-user-mode git
+map global user h ':enter-user-mode git<ret>'        -docstring 'git hunks'
+map global git  n ':git next-hunk<ret>'              -docstring 'next change'
+map global git  p ':git prev-hunk<ret>'              -docstring 'previous change'
+map global git  s ':git apply --cached<ret>'         -docstring 'stage selected lines'
+map global git  u ':git apply --cached --reverse<ret>' -docstring 'unstage selected lines'
+map global git  r ':gitsigns-revert<ret>'            -docstring 'revert selected lines to the index'
+map global git  b ':git blame<ret>'                  -docstring 'toggle blame (<ret>: show commit)'
+map global git  d ':git diff -- %val{buffile}<ret>'  -docstring 'diff of this file'
+map global git  h ':git hide-diff<ret>'              -docstring 'hide the marks (<space>hg shows them)'
+map global git  g ':git show-diff<ret>'              -docstring 'show the marks'

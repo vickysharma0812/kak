@@ -26,7 +26,9 @@ formatters, tree-sitter grammar, theme and space-leader keys.
   Neovim, served by a patched simple-completion-language-server (see below).
 - **Pickers** in tmux popups: fzf for files, live grep and buffers, plus yazi and broot.
 - **Helix-like completion**: `<tab>`/`<s-tab>` or `<down>`/`<up>` move through the menu, `<ret>` accepts.
-- Catppuccin Mocha theme matching Helix's, and a Helix-style modeline.
+- **Git signs**: added / changed / deleted line marks (like gitsigns), hunk jumps,
+  stage / revert selected lines and blame, using Kakoune's built-in `git` command.
+- Catppuccin Mocha theme matching Helix's, and a Helix-style modeline with the git branch.
 
 ## Keys
 
@@ -44,6 +46,7 @@ formatters, tree-sitter grammar, theme and space-leader keys.
 | `<space>=` | format | `<space>c` | comment lines |
 | `<space>t` | tree-sitter menu | `<a-up>` / `<a-down>` | select parent / child node |
 | `<space>g` | lazygit | `<space>+` | easifem build (`b`, `c`) and run test (`+`) |
+| `<space>h` | git: next/prev change, stage, revert, blame | | |
 | `<space>p` / `<space>P` | paste from clipboard | `mm` | matching bracket |
 | `ms` / `mr` / `md` | surround add / replace / delete | `mi` / `ma` | select inside / around |
 
