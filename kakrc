@@ -472,8 +472,23 @@ define-command lazygit -docstring 'lazygit in a popup' %{
 }
 
 # easifem build / test (same scripts as Helix's "+" mode)
-define-command easifem-build-base    %{ nop %sh{ ~/.config/tmux/scripts/buildBase.sh    >/dev/null 2>&1 </dev/null & } }
-define-command easifem-build-classes %{ nop %sh{ ~/.config/tmux/scripts/buildClasses.sh >/dev/null 2>&1 </dev/null & } }
+# Builds run in the background (bin/easifem-build); Kakoune and macOS report
+# the result, and <space>+ l opens the log of the latest build.
+define-command easifem-build -params 1 -docstring 'easifem-build <base|classes>: build and install in the background' %{
+    nop %sh{ "$kak_config/bin/easifem-build" "$kak_session" "$kak_client" "$1" >/dev/null 2>&1 </dev/null & }
+    echo -markup "{Information}easifem: building %arg{1} in the background"
+}
+define-command easifem-build-base    %{ easifem-build base }
+define-command easifem-build-classes %{ easifem-build classes }
+define-command easifem-build-log -params ..1 -docstring 'easifem-build-log [base|classes]: open a build log (default: the latest)' %{
+    evaluate-commands %sh{
+        dir=${XDG_CACHE_HOME:-$HOME/.cache}/easifem
+        if [ -n "$1" ]; then log=$dir/easifem-build-$1-log.txt
+        else log=$(ls -t "$dir"/easifem-build-*-log.txt 2>/dev/null | head -n 1); fi
+        [ -f "$log" ] || { echo "fail 'easifem: no build log yet'"; exit; }
+        printf "edit -existing '%s'\nset-option buffer autoreload yes\n" "$log"
+    }
+}
 define-command easifem-run-test -docstring 'easifem run on this file' %{
     write
     popup bash -c %sh{
@@ -487,6 +502,7 @@ declare-user-mode easifem
 map global user    + ':enter-user-mode easifem<ret>'   -docstring 'easifem build/test'
 map global easifem b ':easifem-build-base<ret>'        -docstring 'build base'
 map global easifem c ':easifem-build-classes<ret>'     -docstring 'build classes'
+map global easifem l ':easifem-build-log<ret>'         -docstring 'open the latest build log'
 map global easifem + ':easifem-run-test<ret>'          -docstring 'run test for this file'
 
 # ─── match / surround (Helix's `m` mode) ──────────────────────────────────────

@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+# Build and install an easifem package in the background, then report to
+# Kakoune (and as a macOS notification).
+# usage: easifem-build <session> <client> <base|classes>
+# The full output goes to ~/.cache/easifem/easifem-build-<pkg>-log.txt.
+
+session=$1 client=$2 pkg=$3
+logdir=${XDG_CACHE_HOME:-$HOME/.cache}/easifem
+log=$logdir/easifem-build-$pkg-log.txt
+pidfile=$logdir/easifem-build-$pkg.pid
+mkdir -p "$logdir"
+
+# Quote a string for Kakoune ('...' with doubled single quotes).
+kq() { local q="'"; printf "'%s'" "${1//$q/$q$q}"; }
+send() { printf 'evaluate-commands -try-client %s -- %s\n' "$client" "$(kq "$1")" | kak -p "$session"; }
+notify() { osascript -e "display notification \"$1\" with title \"easifem\"" >/dev/null 2>&1; }
+
+if [ -f "$pidfile" ] && kill -0 "$(cat "$pidfile")" 2>/dev/null; then
+    send "echo -markup {Error}easifem: $pkg is already building"
+    exit 0
+fi
+echo $$ >"$pidfile"
+trap 'rm -f "$pidfile"' EXIT
+
+start=$(date +%s)
+{
+    echo "# easifem dev $pkg && easifem install $pkg   ($(date '+%Y-%m-%d %H:%M:%S'))"
+    easifem dev "$pkg" -q && easifem install "$pkg" --no-download -q
+} >"$log" 2>&1
+status=$?
+secs=$(($(date +%s) - start))
+took="$((secs / 60))m $((secs % 60))s"
+
+if [ $status -eq 0 ]; then
+    send "info -title easifem $(kq "$pkg: built and installed ($took)")"
+    notify "$pkg: built and installed ($took)"
+else
+    tail=$(tail -n 8 "$log")
+    send "info -title $(kq "easifem: $pkg FAILED (exit $status, $took)") $(kq "$tail
+
+<space>+ l opens the log")"
+    notify "$pkg: build FAILED, <space>+ l opens the log"
+fi

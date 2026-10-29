@@ -323,6 +323,30 @@ In insert mode the menu appears as you type:
 
 Snippets are the shared VSCode-style ones in `~/.config/nvim/snippets`.
 
+## Writing Markdown
+
+No preview: Markdown is edited as text, with the same help as in Helix.
+
+- **Highlighting** (tree-sitter): headings coloured by level, bold, italic,
+  `` `code` ``, links, list markers, checkboxes, quotes. A fenced code block
+  (```` ```fortran ````) is highlighted in its language.
+- **Soft wrap**: long lines wrap at word boundaries, `↪` marks a wrapped line.
+  It is display only; the file keeps one long line per paragraph.
+- **marksman** (LSP): `gd` on a link jumps to its target heading or file,
+  `<space>s` lists the headings, completion suggests headings and files in links.
+- **rumdl** (LSP): lint warnings as you type (`<space>d` lists them), and it
+  formats the file on save (`<space>=` to format now).
+- Snippets from `~/.config/nvim/snippets` work as in Fortran.
+
+Useful keys while writing prose:
+
+| Keys | Action |
+|---|---|
+| `<a-i>p` / `<a-a>p` | select the paragraph (without / with the blank line after it) |
+| `ms*` | wrap the selection in `*` (italic); `ms*` again makes it `**bold**` |
+| ``ms` `` | wrap the selection in backticks (inline code) |
+| `w` / `b`, `/` | move inside a long paragraph: `j` / `k` move by file line, so they jump over a whole wrapped paragraph |
+
 ## Git
 
 Files in a git repo get marks next to the line numbers, like gitsigns or Helix's
@@ -353,8 +377,22 @@ has unsaved edits (`:w` first). Check the selection before pressing `r`.
 | Key | Action |
 |---|---|
 | `<space>+` `+` | run the current test file (`easifem run`) in a popup |
-| `<space>+` `b` / `c` | build and install base / classes |
+| `<space>+` `b` / `c` | build and install base / classes **in the background** |
+| `<space>+` `l` | open the log of the latest build |
+| `:easifem-build-log base` / `classes` | open that package's log |
 | `<space>g` | lazygit |
+
+Builds run `easifem dev <pkg> -q && easifem install <pkg> --no-download -q` with
+no popup, so you keep editing. When the build ends:
+
+- **success**: an info box and a macOS notification ("base: built and installed (2m 13s)")
+- **failure**: an info box with the last lines of the log and a notification;
+  `<space>+` `l` opens the full log in Kakoune
+
+Logs: `~/.cache/easifem/easifem-build-base-log.txt` and
+`easifem-build-classes-log.txt`, rewritten by each build (an open log buffer
+reloads by itself). Pressing `b` again while that package is building only says
+it is already building. Helix's `+` menu still uses the tmux popup scripts.
 
 ## Sessions
 
@@ -495,7 +533,7 @@ Then restart Kakoune (each session starts its own kak-lsp).
 - **No gfortran errors (efm) after saving**: kak-lsp is unpatched; see
   [Patched tools](#kak-lsp). efm only runs on save, so errors appear after `:w`,
   not while typing
-- **No Fortran or TOML highlighting**: restart the tree-sitter server, then
+- **No Fortran, TOML or Markdown highlighting**: restart the tree-sitter server, then
   restart Kakoune: `kill (cat $TMPDIR/kak-tree-sitter/pid)`
 - **No snippets**: start Kakoune from fish (it sets `SNIPPETS_PATH`), and check
   that `bin/scls-kak` exists; see [Patched tools](#scls)
