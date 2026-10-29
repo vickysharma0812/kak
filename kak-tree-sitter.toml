@@ -27,3 +27,20 @@ path = "/Users/easifem/.config/helix/runtime/grammars/toml.so"
 
 [language.toml.queries.source.local]
 path = "/Users/easifem/.config/helix/runtime/queries/toml"
+
+# Markdown, as Helix does it: a block grammar (headings, lists, code blocks)
+# whose queries inject an inline grammar (bold, italic, code spans, links) into
+# each paragraph, and the fence's language into fenced code blocks.
+# The block grammar is the one Helix builds; the inline one is not built in
+# ~/.config/helix, so it comes from Homebrew's Helix runtime (as in Helix).
+[grammar.markdown.source.local]
+path = "/Users/easifem/.config/helix/runtime/grammars/markdown.so"
+
+[language.markdown.queries.source.local]
+path = "/Users/easifem/.config/helix/runtime/queries/markdown"
+
+[grammar."markdown.inline".source.local]
+path = "/opt/homebrew/opt/helix/libexec/runtime/grammars/markdown_inline.so"
+
+[language."markdown.inline".queries.source.local]
+path = "/opt/homebrew/opt/helix/libexec/runtime/queries/markdown.inline"

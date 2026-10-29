@@ -139,5 +139,6 @@ evaluate-commands %sh{
     set-face global ts_markup_link_text          ${lavender}
     set-face global ts_markup_link_label         ${sapphire}
     set-face global ts_markup_raw                ${green}
+    set-face global ts_markup_quote              ${pink}
 EOF
 }
