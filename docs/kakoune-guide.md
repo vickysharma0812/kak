@@ -15,7 +15,8 @@ Don't try to learn every table at once. Go in stages, and do the
    [Movement](#movement), `d` `c` `y` `p` `u` from [Editing](#editing), `:w` `:q`.
    Read [Coming from Helix](#coming-from-helix): most of your Helix habits work.
 2. **Day 3–5: select like Kakoune.** `x` (and `xxx`), objects (`<a-i>` / `<a-a>`),
-   `f` / `t`, search. Use `<space>f` and `gd` instead of scrolling.
+   `f` / `t`, search. Use `<space>f`, `<space>s` (jump to a procedure by name),
+   `gw` (jump to a word on screen) and `gd` instead of scrolling.
 3. **Week 2: multiple selections.** `%`, `s`, `S`, `<a-s>`, `<a-k>`, `&`, `C`.
    This is where Kakoune pays off: [Recipes](#recipes-for-fortran) are all built
    from these keys.
@@ -70,7 +71,7 @@ Most keys are the same (`w` `b` `e` `f` `t` `x` `%` `s` `S` `C` `,` `;` `&` `|`
 | `ctrl-c` (comment) | `<space>c` | |
 | `]g` / `[g` (next / previous change) | `<space>hn` / `<space>hp` | see [Git](#git) |
 | `:bc` | `:db` or `<space>b` `q` | close the buffer |
-| `gw` (jump labels) | — | use `/`, `f`, or `<number>g` |
+| `gw` (jump labels) | same | added in this config; `<c-o>` jumps back |
 | `mm` `ms` `mr` `md` `mi` `ma` | same | added in this config (see [Surround](#surround-helixs-m-mode)) |
 | auto pairs | same | added in this config (see [Auto pairs](#auto-pairs)) |
 
@@ -99,6 +100,7 @@ Most keys are the same (`w` `b` `e` `f` `t` `x` `%` `s` `S` `C` `,` `;` `&` `|`
 | `gg` / `ge` | file start / file end |
 | `gt` / `gc` / `gb` | top / centre / bottom of the screen |
 | `<number>g` | go to line `<number>` |
+| `gw` | jump to any word on screen: two-letter labels appear over the words, type one to select that word (`<esc>` cancels) |
 | `mm` | select to the matching bracket (Helix-style; `M` extends) |
 | `<c-o>` / `<c-i>` | jump back / forward in the jump list |
 | `<c-d>` / `<c-u>` | half page down / up |
@@ -300,8 +302,8 @@ Registers worth knowing: `"` last yank/delete, `/` last search, `@` last macro,
 | Key | Action |
 |---|---|
 | `<space>f` | find a file (fzf) |
-| `<space>e` | yazi: pick a file, `<ret>` opens it in this session |
-| `<space>E` | broot: type to filter the tree, `<ret>` on a file opens it (on a folder, enters it); `<esc>` goes back / quits |
+| `<space>e` | broot: type to filter the tree, `<ret>` on a file opens it (on a folder, enters it); `<esc>` goes back / quits |
+| `<space>E` | yazi: pick a file, `<ret>` opens it in this session |
 | `<space>,` | pick an open buffer |
 | `gn` / `gp` / `ga` | next / previous / last buffer |
 | `<space>b` | buffer menu: `q` close, `Q` close and discard, `o` close others, `w` / `W` write / write all |
@@ -474,6 +476,11 @@ end subroutine foo
 7. Upper-case every `integer`: `%` `sinteger<ret>` `~`.
 8. Put `1` at the start of lines 2–4 with one insert: `2g` `C` `C` `I1<esc>`
    (`C` adds a cursor on the next line).
+9. Jump to the subroutine by name: `<space>s`, type `fo`, `<ret>`. In a real
+   easifem module, type part of any procedure name; `<tab>` steps through matches.
+10. Auto pairs: on the `print *, N` line, `A` and type `, abs(x)` then `<esc>`.
+    The `(` adds a `)` and typing `)` steps over it, so the line ends in
+    `abs(x)`, not `abs(x))`. Then `o(` `<backspace>`: both characters go.
 
 ## Patched tools
 
@@ -556,5 +563,5 @@ Then restart Kakoune (each session starts its own kak-lsp).
 - **No snippets**: start Kakoune from fish (it sets `SNIPPETS_PATH`), and check
   that `bin/scls-kak` exists; see [Patched tools](#scls)
 - **Pickers do nothing**: Kakoune must run inside tmux
-- **`<space>E` (broot) opens nothing**: `<ret>` must be on a file, not a folder;
+- **`<space>e` (broot) opens nothing**: `<ret>` must be on a file, not a folder;
   check `broot/kak.hjson` exists

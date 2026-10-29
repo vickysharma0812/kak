@@ -41,7 +41,7 @@ formatters, tree-sitter grammar, theme and space-leader keys.
 | Key | Action | Key | Action |
 |---|---|---|---|
 | `<space>f` | files | `<space>/` | live grep |
-| `<space>,` | buffer picker | `<space>e` / `<space>E` | yazi / broot |
+| `<space>,` | buffer picker | `<space>e` / `<space>E` | broot / yazi |
 | `<space>b` | buffer mode | `gn` / `gp` / `ga` | next / previous / last buffer |
 | `<space>k` | hover | `<space>a` | code action |
 | `<space>r` | rename | `<space>d` | diagnostics |
@@ -52,6 +52,7 @@ formatters, tree-sitter grammar, theme and space-leader keys.
 | `<space>g` | lazygit | `<space>+` | easifem background build (`b`, `c`), build log (`l`), run test (`+`) |
 | `<space>h` | git: next/prev change, stage, revert, blame | | |
 | `<space>p` / `<space>P` | paste from clipboard | `mm` | matching bracket |
+| `gw` | jump to a word by its label | | |
 | `ms` / `mr` / `md` | surround add / replace / delete | `mi` / `ma` | select inside / around |
 
 In insert mode: `<tab>`/`<s-tab>` or `<down>`/`<up>` move through the completion menu, `<ret>` accepts
@@ -88,6 +89,7 @@ adjust it if Kakoune is installed elsewhere.
 | `autoload/fortran.kak` | Fortran filetype and indentation |
 | `colors/catppuccin-mocha.kak` | theme, including tree-sitter faces |
 | `bin/easifem-build` | background easifem build with log and notifications |
+| `bin/kak-jump-labels` | labels for `gw` (jump to a word on screen) |
 | `bin/kak-picker` | fzf, yazi and broot pickers in tmux popups |
 | `broot/kak.hjson` | broot verb for the picker: `<ret>` on a file opens it in Kakoune |
 | `bin/kak-snippet-flatten` | rewrites VSCode snippets into what kak-lsp can expand |

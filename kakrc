@@ -3,7 +3,7 @@
 #
 # Leader is <space> (Kakoune's user mode), like Helix's space mode.
 #   <space>f  files          <space>/  live grep       <space>,  buffer picker
-#   <space>e  yazi
+#   <space>e  broot          <space>E  yazi            <space>h  git hunks / blame
 #   <space>b  buffer mode    gn / gp   next / prev buffer   ga  last buffer
 #   <space>s  goto symbol    <space>S  workspace syms  <space>d  diagnostics
 #   <space>a  code action    <space>r  rename          <space>k  hover
@@ -11,6 +11,8 @@
 #   <space>l  all LSP cmds (l s goto symbol, l S symbol list)
 #   <space>g  lazygit        <space>+  easifem build/test
 #   gd / gr / gy             definition / references / type definition
+#   m         match / surround (mm ms mr md mi ma), as in Helix
+#   gw        jump to a word by its two-letter label, as in Helix
 
 # ─── tree-sitter ──────────────────────────────────────────────────────────────
 # Must come before the colorscheme: KTS resets the ts_* faces when it starts.
@@ -421,8 +423,8 @@ define-command picker-buffers -docstring 'pick a buffer' %{ evaluate-commands %s
 map global user f ':picker-files<ret>'   -docstring 'files'
 map global user / ':picker-grep<ret>'    -docstring 'live grep'
 map global user , ':picker-buffers<ret>' -docstring 'buffer picker'
-map global user e ':yazi<ret>'           -docstring 'yazi file manager'
-map global user E ':broot<ret>'          -docstring 'broot file tree'
+map global user e ':broot<ret>'          -docstring 'broot file tree'
+map global user E ':yazi<ret>'           -docstring 'yazi file manager'
 
 # ─── buffers ──────────────────────────────────────────────────────────────────
 # ga (last buffer) is built in; gn / gp match Helix.
@@ -610,6 +612,62 @@ hook -group auto-pairs global InsertDelete \[ %{ try %{ auto-pairs-skip ] } }
 hook -group auto-pairs global InsertDelete \{ %[ try %[ auto-pairs-skip '}' ] ]
 hook -group auto-pairs global InsertDelete '["''`]' %{ try %{ auto-pairs-skip %val{hook_param} } }
 
+# ─── jump labels (Helix's gw) ─────────────────────────────────────────────────
+# gw draws a two-letter label over every word in view, nearest the cursor first
+# (bin/kak-jump-labels); typing a label selects that word. Any other key cancels.
+# The jump is saved in the jump list, so <c-o> goes back.
+declare-option -hidden range-specs jump_labels
+declare-option -hidden str jump_targets
+map global goto w '<esc>:goto-word<ret>' -docstring 'jump to a word by its label'
+define-command goto-word -docstring 'jump to a word in view by its two-letter label (Helix gw)' %{
+    goto-word-labels %val{cursor_line} %val{cursor_column}
+    add-highlighter window/goto-word replace-ranges jump_labels
+    on-key %{ goto-word-first %val{key} }
+}
+define-command -hidden goto-word-labels -params 2 %{
+    evaluate-commands -draft %{
+        evaluate-commands %sh{
+            set -- $kak_window_range
+            top=$(($1 + 1)) bot=$(($1 + $3))
+            [ $bot -gt $kak_buf_line_count ] && bot=$kak_buf_line_count
+            echo "select $top.1,$bot.1"
+        }
+        execute-keys x
+        evaluate-commands %sh{
+            printf %s "$kak_selection" |
+                "$kak_config/bin/kak-jump-labels" "${kak_selection_desc%%.*}" "$1" "$2" "$kak_timestamp"
+        }
+    }
+}
+# After the first letter only the labels starting with it remain, showing
+# their second letter.
+define-command -hidden goto-word-first -params 1 %{
+    evaluate-commands %sh{
+        case $1 in [a-z]) ;; *) echo goto-word-done; exit ;; esac
+        specs=
+        for t in $kak_opt_jump_targets; do
+            case $t in "$1"?=*) ;; *) continue ;; esac
+            start=${t#*=} start=${start%,*}
+            specs="$specs '$start,$start|{JumpLabel}$(printf %s "$t" | cut -c2)'"
+        done
+        [ -n "$specs" ] || { echo goto-word-done; exit; }
+        echo "set-option window jump_labels $kak_timestamp $specs"
+        echo "on-key %{ goto-word-second $1 %val{key} }"
+    }
+}
+define-command -hidden goto-word-second -params 2 %{
+    goto-word-done
+    evaluate-commands %sh{
+        for t in $kak_opt_jump_targets; do
+            case $t in "$1$2"=*) printf 'execute-keys <c-s>\nselect %s\n' "${t#*=}"; exit ;; esac
+        done
+    }
+}
+define-command -hidden goto-word-done %{
+    remove-highlighter window/goto-word
+    unset-option window jump_labels
+}
+
 # ─── modeline / prompt ────────────────────────────────────────────────────────
 # Helix-style: coloured mode badge, file, LSP status, diagnostics, position.
 # The `:` prompt is drawn in the status line, so it shares this bar.
@@ -654,6 +712,19 @@ define-command -hidden gitsigns-update %{
 }
 hook global BufWritePost .*                %{ gitsigns-update }
 hook global ModeChange   pop:insert:normal %{ gitsigns-update }
+hook global BufReload    .*                %{ gitsigns-update }
+# The gutter column is as wide as its widest flag, so it would appear (and
+# shift the text) with the first change. A blank flag on line 0, which is
+# never drawn, keeps it one column wide; kak-lsp does the same for diagnostics.
+# (The hook parameter does not show line-specs values, hence the shell test.)
+hook global BufSetOption git_diff_flags=.* %{
+    evaluate-commands %sh{
+        case $kak_quoted_opt_git_diff_flags in
+            *"'0| '"*) ;;
+            *) echo "set-option buffer git_diff_flags $kak_quoted_opt_git_diff_flags '0| '" ;;
+        esac
+    }
+}
 
 # Revert rewrites the file from git, so unsaved edits would be mixed in.
 define-command -hidden gitsigns-revert %{

@@ -68,6 +68,7 @@ evaluate-commands %sh{
     set-face global ModelineMode       ModeNormal
     set-face global ModelineDim        ${overlay1},${surface0}
     set-face global ModelineBranch     ${mauve},${surface0}
+    set-face global JumpLabel          ${red}+b
     set-face global ModelineError      ${red},${surface0}
     set-face global ModelineWarning    ${yellow},${surface0}
     set-face global MatchingChar       ${peach},${surface1}+b

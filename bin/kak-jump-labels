@@ -1,0 +1,43 @@
+#!/usr/bin/env perl
+# Two-letter jump labels for the words in view, like Helix's gw.
+# usage: kak-jump-labels <first line> <cursor line> <cursor column> <timestamp>
+# The visible lines come on stdin. Prints Kakoune commands that set
+# jump_labels (a replace-ranges spec drawing each label over the start of its
+# word) and jump_targets ("label=word range" pairs).
+use strict;
+use warnings;
+
+my ($top, $cline, $ccol, $ts) = @ARGV;
+my @lines = split /\n/, do { local $/; <STDIN> } // '';
+
+# Words of two or more characters (ASCII, as columns are bytes).
+my (@after, @before);
+for my $i (0 .. $#lines) {
+    my $line = $top + $i;
+    while ($lines[$i] =~ /\b\w{2,}/g) {
+        my $col = $-[0] + 1;
+        my $word = [$line, $col, $+[0]];
+        if ($line > $cline || ($line == $cline && $col >= $ccol)) { push @after, $word }
+        else { unshift @before, $word }
+    }
+}
+
+# Nearest words first, alternating forward and backward from the cursor.
+my @words;
+while (@after || @before) {
+    push @words, shift @after if @after;
+    push @words, shift @before if @before;
+}
+
+my @alphabet = ('a' .. 'z');
+my (@specs, @targets);
+for my $n (0 .. $#words) {
+    last if $n >= @alphabet * @alphabet;
+    my ($line, $col, $end) = @{ $words[$n] };
+    my $label = $alphabet[int($n / @alphabet)] . $alphabet[$n % @alphabet];
+    push @specs, "'$line.$col,$line." . ($col + 1) . "|{JumpLabel}$label'";
+    push @targets, "$label=$line.$col,$line.$end";
+}
+
+print "set-option window jump_labels $ts @specs\n";
+print "set-option window jump_targets '@targets'\n";
