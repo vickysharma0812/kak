@@ -56,7 +56,7 @@ formatters, tree-sitter grammar, theme and space-leader keys.
 | `gd` / `gr` / `gy` | definition / references / type definition | `<space>l` | all LSP commands (`s` goto symbol, `S` symbol list) |
 | `<space>=` | format | `<space>c` | comment lines |
 | `<space>t` | tree-sitter menu | `<a-up>` / `<a-down>` | select parent / child node |
-| `<space>g` / `<space>G` | lazygit / diffnav | `<space>+` | easifem background build (`b`, `c`), its errors (`e`, `n`, `p`) and log (`l`), run test (`+`) |
+| `<space>g` / `<space>G` | lazygit / diffnav | `<space>+` | easifem background build (`b`, `c`), its errors (`e`, `n`, `p`) and log (`l`), run test (`+`), split `use ..., only:` lists (`u`) |
 | `<space>h` | git: next/prev change, stage, revert, blame | | |
 | `<space>p` / `<space>P` | paste from clipboard | `mm` | matching bracket |
 | `gw` | jump to a word by its label | | |
@@ -96,6 +96,7 @@ adjust it if Kakoune is installed elsewhere.
 | `autoload/fortran.kak` | Fortran filetype and indentation |
 | `colors/catppuccin-mocha.kak` | theme, including tree-sitter faces |
 | `bin/easifem-build` | background easifem build with log and notifications |
+| `bin/split-use-filter` | runs easifem's `split-use-only.fish` on piped text, for `:split-use` |
 | `bin/easifem-errors` | picks the gfortran errors out of a build log for `<space>+ e` |
 | `bin/kak-jump-labels` | labels for `gw` (jump to a word on screen) |
 | `bin/kak-picker` | fzf (files, grep, buffers, diagnostics, palette), yazi and broot pickers in tmux popups |

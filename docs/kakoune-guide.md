@@ -222,6 +222,12 @@ inner loop it jumps straight to the outer one.
 | `<space>p` / `<space>P` | paste from the macOS clipboard after / before |
 | `<space>c` | comment / uncomment lines |
 
+In Fortran files, `<ret>` keeps the indent of the line above and adds one level
+after a block opener (`do`, `if ... then`, `subroutine`, `contains`, ...);
+`end ...`, `else` and `case` dedent as you type them. On a comment line, the new
+line continues the comment (`!` or `!!`, plus a space) at the same indent.
+`<esc>` trims trailing spaces.
+
 ## Surround (Helix's `m` mode)
 
 | Key | Action |
@@ -418,6 +424,7 @@ until you `git add` them. In diffnav, `e` toggles the file tree and `/` searches
 | `<space>+` `l` | open the log of the latest build |
 | `<space>+` `e` | list the compiler errors of the latest build; `<ret>` on one opens the file there |
 | `<space>+` `n` / `p` | jump to the next / previous build error |
+| `<space>+` `u` or `:split-use` | split `use ..., only: a, b` into one import per line: in the selected lines, or the whole buffer when nothing is selected |
 | `:easifem-build-log base` / `classes` | open that package's log (`:easifem-build-errors` takes the same) |
 | `<space>g` | lazygit |
 
@@ -437,6 +444,20 @@ Logs: `~/.cache/easifem/easifem-build-base-log.txt` and
 `easifem-build-classes-log.txt`, rewritten by each build (an open log buffer
 reloads by itself). Pressing `b` again while that package is building only says
 it is already building. Helix's `+` menu still uses the tmux popup scripts.
+
+`:split-use` runs `$easifem/config/scripts/split-use-only.fish` through the
+script's stdin mode, so unsaved edits count and the file is not written.
+
+- **Lines selected** (e.g. `x` `x` `x`, or an `<a-i>` object): only those lines
+  change. Each selection is widened to whole lines and must hold whole
+  statements, `&` continuations included.
+- **Only a cursor**: the whole buffer.
+
+Spelling, case, renames and indentation are kept; comments move above the
+import group. Statements it can't handle (inside `#ifdef`, `;`-separated, or
+cut off by the selection) are left alone and listed in an info box, by line
+number (counted from the selection's first line in selection mode). One `u`
+undoes it.
 
 ## Sessions
 

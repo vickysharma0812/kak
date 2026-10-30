@@ -667,6 +667,46 @@ define-command easifem-build-errors -params ..1 -docstring 'easifem-build-errors
         echo "echo 'easifem: $n error(s); <ret> opens one, <space>+ n / p the next / previous'"
     }
 }
+# Split every `use ..., only: a, b` into one import per line, with
+# $easifem/config/scripts/split-use-only.fish: in the selected lines, or in the
+# whole buffer when nothing is selected (only cursors). The text goes through
+# the script's stdin mode (bin/split-use-filter), so unsaved edits count and one
+# `u` undoes it; text is left as it was if the script fails. Its notes
+# (statements it skipped) are shown.
+declare-option -hidden str split_use_messages
+declare-option -hidden int split_use_before
+declare-option -hidden str split_use_where   # where the notes' line numbers count from
+define-command split-use -docstring 'split USE ... ONLY lists into one import per line (selected lines, or the whole buffer)' %{
+    evaluate-commands %sh{
+        script=${easifem:-$HOME/Dropbox/easifem}/config/scripts/split-use-only.fish
+        [ -f "$script" ] || echo "fail 'split-use: $script not found'"
+    }
+    set-option global split_use_messages %sh{ mktemp "${TMPDIR:-/tmp}/kak-split-use.XXXXXX" }
+    set-option global split_use_before %val{timestamp}
+    evaluate-commands -draft %{
+        evaluate-commands %sh{
+            for n in $kak_selections_length; do
+                [ "$n" -gt 1 ] && {   # whole lines
+                    echo "execute-keys x; set-option global split_use_where ' of the selection'"; exit
+                }
+            done
+            echo "execute-keys '%'; set-option global split_use_where ''"
+        }
+        execute-keys "|%val{config}/bin/split-use-filter %opt{split_use_messages}<ret>"
+    }
+    evaluate-commands %sh{
+        if [ "$kak_timestamp" = "$kak_opt_split_use_before" ]; then
+            echo "echo 'split-use: nothing to split'"
+        else
+            echo "echo 'split-use: done (u undoes it)'"
+        fi
+        f=$kak_opt_split_use_messages
+        [ -s "$f" ] && printf "info -title split-use '%s'\n" \
+            "$(sed "s/^<stdin>:\([0-9]*\):/line \1$kak_opt_split_use_where:/; s/'/''/g" "$f")"
+        rm -f "$f"
+    }
+}
+
 define-command easifem-run-test -docstring 'easifem run on this file' %{
     write
     popup bash -c %sh{
@@ -686,6 +726,7 @@ map global easifem e ':easifem-build-errors<ret>'      -docstring 'list the erro
 map global easifem n ':jump-next *easifem-errors*<ret>'     -docstring 'next build error'
 map global easifem p ':jump-previous *easifem-errors*<ret>' -docstring 'previous build error'
 map global easifem + ':easifem-run-test<ret>'          -docstring 'run test for this file'
+map global easifem u ':split-use<ret>'                -docstring 'split USE ... ONLY lists, one import per line'
 
 # ─── match / surround (Helix's `m` mode) ──────────────────────────────────────
 # mm match bracket, ms add, mr replace, md delete, mi / ma inside / around.

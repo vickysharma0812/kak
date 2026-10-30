@@ -39,8 +39,10 @@ define-command -hidden fortran-indent-on-new-line %{
         try %{ execute-keys -draft <semicolon> K <a-&> }
         # remove trailing white spaces on the previous line
         try %{ execute-keys -draft k x s \h+$ <ret> d }
-        # continue a comment
-        try %{ execute-keys -draft k x s ^\h*\K!+\h* <ret> y gh j P }
+        # continue a comment: copy its "!" (or "!!") and paste it, plus a space,
+        # at the cursor (Z / z), i.e. after the indent just copied.
+        # (execute-keys restores the registers it uses: the user's yank is kept.)
+        try %{ execute-keys -draft <semicolon> Z k x s ^\h*\K!+ <ret> y z P a<space><esc> }
         # indent after a block opener
         try %{
             execute-keys -draft k x <a-k> %opt{fortran_block_open} <ret>

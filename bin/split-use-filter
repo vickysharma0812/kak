@@ -1,0 +1,16 @@
+#!/bin/sh
+# Filter for Kakoune's `|`: split USE ... ONLY lists in stdin with
+# $easifem/config/scripts/split-use-only.fish. If the script fails, the input
+# is printed unchanged, so the text is never lost. Its messages are appended
+# to the file given as $1.
+# usage: split-use-filter <messages-file>
+script=${easifem:-$HOME/Dropbox/easifem}/config/scripts/split-use-only.fish
+in=$(mktemp "${TMPDIR:-/tmp}/split-use.XXXXXX")
+trap 'rm -f "$in" "$in.out"' EXIT
+cat >"$in"
+if fish --no-config "$script" - <"$in" >"$in.out" 2>>"$1"; then
+    cat "$in.out"
+else
+    echo "split-use: the script failed (exit $?)" >>"$1"
+    cat "$in"
+fi
