@@ -30,14 +30,24 @@ start=$(date +%s)
 status=$?
 secs=$(($(date +%s) - start))
 took="$((secs / 60))m $((secs % 60))s"
+echo "# finished: exit $status ($took)" >>"$log"
 
 if [ $status -eq 0 ]; then
     send "info -title easifem $(kq "$pkg: built and installed ($took)")"
     notify "$pkg: built and installed ($took)"
 else
-    tail=$(tail -n 8 "$log")
-    send "info -title $(kq "easifem: $pkg FAILED (exit $status, $took)") $(kq "$tail
+    # Show the first compiler errors (file name only), or the end of the log.
+    errors=$("$(dirname "$0")/easifem-errors" "$log")
+    if [ -n "$errors" ]; then
+        n=$(printf '%s\n' "$errors" | wc -l | tr -d ' ')
+        body=$(printf '%s\n' "$errors" | head -n 6 | sed 's|^.*/||')
+        title="easifem: $pkg FAILED, $n error(s) ($took)"
+    else
+        body=$(tail -n 8 "$log")
+        title="easifem: $pkg FAILED (exit $status, $took)"
+    fi
+    send "info -title $(kq "$title") $(kq "$body
 
-<space>+ l opens the log")"
-    notify "$pkg: build FAILED, <space>+ l opens the log"
+<space>+ e lists the errors, <space>+ l opens the log")"
+    notify "$pkg: build FAILED, <space>+ e lists the errors"
 fi

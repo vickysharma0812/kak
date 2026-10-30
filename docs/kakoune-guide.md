@@ -87,6 +87,10 @@ Most keys are the same (`w` `b` `e` `f` `t` `x` `%` `s` `S` `C` `,` `;` `&` `|`
 | `<a-;>` | (in insert mode) run one normal-mode command, then return |
 | `:` | command prompt (`:w`, `:q`, `:e file`, ...) |
 
+The cursor is **green in insert mode** (rosewater in normal mode), as in Helix.
+Kakoune can't change the terminal cursor's shape, so the colour does that job.
+Faint `│` indent guides mark each indent level, like Helix's indent guides.
+
 ## Movement
 
 | Key | Action |
@@ -305,12 +309,18 @@ Registers worth knowing: `"` last yank/delete, `/` last search, `@` last macro,
 | `<space>e` | yazi: pick a file, `<ret>` opens it in this session |
 | `<space>E` | broot: type to filter the tree, `<ret>` on a file opens it (on a folder, enters it); `<esc>` goes back / quits |
 | `<space>,` | pick an open buffer |
+| `<space>'` | reopen the last picker with the text you had typed (also after `<esc>`) |
+| `<space>?` | command palette: every key with a description; type a few words (`goto symbol`, `stage`), `<ret>` presses its keys |
 | `gn` / `gp` / `ga` | next / previous / last buffer |
 | `<space>b` | buffer menu: `q` close, `Q` close and discard, `o` close others, `w` / `W` write / write all |
 | `:e <file>` | open a file (`<tab>` completes paths) |
 | `gf` | open the file whose name is selected (select it first, e.g. with `<a-i><a-w>`) |
 | `:w` / `:wa` | write / write all (formats and trims trailing spaces first) |
 | `:q` / `:q!` | close this window / ... discarding changes |
+
+Reopening a file puts the cursor back where it was (kept in
+`~/.local/state/kak/positions`). An explicit line still wins: `kak file +10`,
+`gd`, grep and picker jumps go where they say.
 
 ## Code (LSP, tree-sitter)
 
@@ -321,7 +331,8 @@ Registers worth knowing: `"` last yank/delete, `/` last search, `@` last macro,
 | (automatic) | while typing a call, its signature shows above the cursor (`:lsp-signature-help` to show it on demand) |
 | `<space>a` | code actions |
 | `<space>r` | rename |
-| `<space>d` | diagnostics list |
+| `<space>d` | diagnostics picker (fzf with a preview), for all open files |
+| `<space>D` | diagnostics list (a buffer: `<ret>` jumps) |
 | `<c-n>` / `<c-p>` | next / previous error or warning |
 | `<space>s` | goto symbol: type part of a name, `<tab>` through matches, `<ret>` jumps (no list buffer) |
 | `<space>S` | workspace symbols |
@@ -354,7 +365,7 @@ No preview: Markdown is edited as text, with the same help as in Helix.
   It is display only; the file keeps one long line per paragraph.
 - **marksman** (LSP): `gd` on a link jumps to its target heading or file,
   `<space>s` jumps to a heading, completion suggests headings and files in links.
-- **rumdl** (LSP): lint warnings as you type (`<space>d` lists them), and it
+- **rumdl** (LSP): lint warnings as you type (`<space>d` picks one), and it
   formats the file on save (`<space>=` to format now).
 - Snippets from `~/.config/nvim/snippets` work as in Fortran.
 
@@ -405,15 +416,22 @@ until you `git add` them. In diffnav, `e` toggles the file tree and `/` searches
 | `<space>+` `+` | run the current test file (`easifem run`) in a popup |
 | `<space>+` `b` / `c` | build and install base / classes **in the background** |
 | `<space>+` `l` | open the log of the latest build |
-| `:easifem-build-log base` / `classes` | open that package's log |
+| `<space>+` `e` | list the compiler errors of the latest build; `<ret>` on one opens the file there |
+| `<space>+` `n` / `p` | jump to the next / previous build error |
+| `:easifem-build-log base` / `classes` | open that package's log (`:easifem-build-errors` takes the same) |
 | `<space>g` | lazygit |
 
 Builds run `easifem dev <pkg> -q && easifem install <pkg> --no-download -q` with
 no popup, so you keep editing. When the build ends:
 
 - **success**: an info box and a macOS notification ("base: built and installed (2m 13s)")
-- **failure**: an info box with the last lines of the log and a notification;
-  `<space>+` `l` opens the full log in Kakoune
+- **failure**: an info box with the first compiler errors (or the end of the
+  log) and a notification; `<space>+` `e` lists every error, `<space>+` `l`
+  opens the full log
+
+The error list reads gfortran's `file:line:col:` / `Error: ...` pairs (and
+`Fatal Error`) from the log; warnings are left out. Paths inside the current
+directory are shown relative to it.
 
 Logs: `~/.cache/easifem/easifem-build-base-log.txt` and
 `easifem-build-classes-log.txt`, rewritten by each build (an open log buffer

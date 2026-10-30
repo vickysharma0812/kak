@@ -1,0 +1,31 @@
+#!/usr/bin/env perl
+# Pick the compiler errors out of an easifem build log.
+# usage: easifem-errors <log>
+# Prints one "file:line:col: error: message" line per error (the format of
+# Kakoune's *make* buffer), in log order, without duplicates. gfortran writes
+# the location on its own line and the message a few lines later:
+#   /path/foo.F90:12:5:
+#
+#      12 |   x = 1
+#         |   1
+#   Error: Symbol 'x' at (1) has no IMPLICIT type
+# C/C++ compilers write both on one line ("foo.c:3:1: error: ...").
+use strict;
+use warnings;
+
+my ($loc, %seen);
+while (<>) {
+    chomp;
+    if (/^(\S[^:]*):(\d+):(\d+):\s*$/) {
+        $loc = "$1:$2:$3";
+    } elsif (/^(Fatal )?Error: (.*)/ && defined $loc) {
+        my $err = "$loc: " . ($1 ? 'fatal error' : 'error') . ": $2";
+        print "$err\n" unless $seen{$err}++;
+        undef $loc;
+    } elsif (/^(Warning|Note): /) {
+        undef $loc;
+    } elsif (/^(\S[^:]*):(\d+):(\d+): (fatal error|error): (.*)/) {
+        my $err = "$1:$2:$3: $4: $5";
+        print "$err\n" unless $seen{$err}++;
+    }
+}

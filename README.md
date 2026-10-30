@@ -11,6 +11,8 @@ formatters, tree-sitter grammar, theme and space-leader keys.
   reusing Helix's grammars and queries for Fortran, TOML and Markdown (code blocks
   in Markdown are highlighted in their own language).
 - **Soft wrap** at word boundaries for every file type, as in Helix.
+- **Indent guides**, a **green cursor in insert mode** and `gw` jump labels, as in Helix.
+- **Cursor position remembered** per file between sessions.
 - **Fortran filetype** with auto-indent (Kakoune ships none): `autoload/fortran.kak`.
 - **LSP** via [kakoune-lsp](https://github.com/kakoune-lsp/kakoune-lsp), with the same
   servers as Helix:
@@ -26,7 +28,9 @@ formatters, tree-sitter grammar, theme and space-leader keys.
 
 - **Snippets**: VSCode-style snippets from `$SNIPPETS_PATH`, shared with Helix and
   Neovim, served by a patched simple-completion-language-server (see below).
-- **Pickers** in tmux popups: fzf for files, live grep and buffers, plus yazi and broot.
+- **Pickers** in tmux popups: fzf for files, live grep, buffers, diagnostics and a
+  command palette of every described key, plus yazi and broot; `<space>'`
+  reopens the last one with its query.
 - **Auto pairs** like Helix: brackets and quotes close themselves, the closing
   character is stepped over, and `<backspace>` deletes an empty pair.
 - **Helix-like completion**: `<tab>`/`<s-tab>` or `<down>`/`<up>` move through the menu, `<ret>` accepts.
@@ -46,12 +50,13 @@ formatters, tree-sitter grammar, theme and space-leader keys.
 | `<space>,` | buffer picker | `<space>e` / `<space>E` | yazi / broot |
 | `<space>b` | buffer mode | `gn` / `gp` / `ga` | next / previous / last buffer |
 | `<space>k` | hover | `<space>a` | code action |
-| `<space>r` | rename | `<space>d` | diagnostics |
+| `<space>r` | rename | `<space>d` | diagnostics picker |
 | `<space>s` / `<space>S` | goto symbol (prompt) / workspace symbols | `<c-n>` / `<c-p>` | next / previous diagnostic |
+| `<space>d` / `<space>D` | diagnostics picker / list | `<space>?` / `<space>'` | command palette / last picker |
 | `gd` / `gr` / `gy` | definition / references / type definition | `<space>l` | all LSP commands (`s` goto symbol, `S` symbol list) |
 | `<space>=` | format | `<space>c` | comment lines |
 | `<space>t` | tree-sitter menu | `<a-up>` / `<a-down>` | select parent / child node |
-| `<space>g` / `<space>G` | lazygit / diffnav | `<space>+` | easifem background build (`b`, `c`), build log (`l`), run test (`+`) |
+| `<space>g` / `<space>G` | lazygit / diffnav | `<space>+` | easifem background build (`b`, `c`), its errors (`e`, `n`, `p`) and log (`l`), run test (`+`) |
 | `<space>h` | git: next/prev change, stage, revert, blame | | |
 | `<space>p` / `<space>P` | paste from clipboard | `mm` | matching bracket |
 | `gw` | jump to a word by its label | | |
@@ -91,8 +96,9 @@ adjust it if Kakoune is installed elsewhere.
 | `autoload/fortran.kak` | Fortran filetype and indentation |
 | `colors/catppuccin-mocha.kak` | theme, including tree-sitter faces |
 | `bin/easifem-build` | background easifem build with log and notifications |
+| `bin/easifem-errors` | picks the gfortran errors out of a build log for `<space>+ e` |
 | `bin/kak-jump-labels` | labels for `gw` (jump to a word on screen) |
-| `bin/kak-picker` | fzf, yazi and broot pickers in tmux popups |
+| `bin/kak-picker` | fzf (files, grep, buffers, diagnostics, palette), yazi and broot pickers in tmux popups |
 | `broot/kak.hjson` | broot verb for the picker: `<ret>` on a file opens it in Kakoune |
 | `bin/kak-snippet-flatten` | rewrites VSCode snippets into what kak-lsp can expand |
 | `bin/build-scls-kak` | builds the patched scls into `bin/scls-kak` (not tracked) |

@@ -5,7 +5,8 @@
 #   <space>f  files          <space>/  live grep       <space>,  buffer picker
 #   <space>e  yazi           <space>E  broot           <space>h  git hunks / blame
 #   <space>b  buffer mode    gn / gp   next / prev buffer   ga  last buffer
-#   <space>s  goto symbol    <space>S  workspace syms  <space>d  diagnostics
+#   <space>s  goto symbol    <space>S  workspace syms  <space>d  diagnostics picker
+#   <space>D  diagnostics list (buffer)  <space>?  command palette  <space>'  last picker
 #   <space>a  code action    <space>r  rename          <space>k  hover
 #   <space>=  format         <space>c  comment         <space>t  tree-sitter
 #   <space>l  all LSP cmds (l s goto symbol, l S symbol list)
@@ -66,6 +67,9 @@ add-highlighter global/ number-lines -relative -hlcursor -separator ' '
 add-highlighter global/ show-matching
 add-highlighter global/ wrap -word -indent -marker '↪ '
 add-highlighter global/ column 79 Whitespace
+# Indent guides, like Helix's indent-guides.render: a bar at each indent level
+# (every indentwidth columns); the other whitespace stays invisible.
+add-highlighter global/indent-guides show-whitespaces -lf ' ' -spc ' ' -nbsp ' ' -tab ' ' -tabpad ' ' -indent '│'
 
 # <tab> inserts spaces
 hook global InsertChar \t %{ execute-keys -draft h@ }
@@ -233,7 +237,7 @@ map global user l ':enter-user-mode lsp<ret>'           -docstring 'LSP mode'
 map global user k ':lsp-hover<ret>'                     -docstring 'hover'
 map global user a ':lsp-code-actions<ret>'              -docstring 'code action'
 map global user r ':lsp-rename-prompt<ret>'             -docstring 'rename'
-map global user d ':lsp-diagnostics<ret>'               -docstring 'diagnostics'
+map global user D ':remove-hooks global picker-diagnostics; lsp-diagnostics<ret>' -docstring 'diagnostics list (buffer)'
 map global user s ':lsp-goto-document-symbol<ret>'      -docstring 'goto symbol'
 map global user S ':lsp-workspace-symbol-incr<ret>'     -docstring 'workspace symbols'
 map global goto d '<esc>:lsp-definition<ret>'           -docstring 'definition (LSP)'
@@ -395,11 +399,30 @@ hook global WinSetOption filetype=(fortran|cmake|bibtex|toml|markdown|latex) %{
 map global user = ':format-smart<ret>' -docstring 'format buffer'
 
 # ─── picker (fzf in a tmux popup) ─────────────────────────────────────────────
-define-command -hidden -params 1.. picker-popup %{ nop %sh{
-    tmux display-popup -E -w 90% -h 85% -d "$PWD" \
-        "$kak_config/bin/kak-picker" "$kak_session" "$kak_client" "$@" \
-        >/dev/null 2>&1 </dev/null &
-} }
+# bin/kak-picker runs the picker and sends the choice back. The fzf pickers
+# also send back their query, so <space>' reopens the last picker with it.
+declare-option -hidden str picker_last
+declare-option -hidden str picker_query
+declare-option -hidden bool picker_resuming false
+define-command -hidden -params 1.. picker-popup %{
+    set-option global picker_last %arg{1}
+    nop %sh{
+        q=; [ "$kak_opt_picker_resuming" = true ] && q=$kak_opt_picker_query
+        tmux display-popup -E -w 90% -h 85% -d "$PWD" -e "KAK_PICKER_QUERY=$q" \
+            "$kak_config/bin/kak-picker" "$kak_session" "$kak_client" "$@" \
+            >/dev/null 2>&1 </dev/null &
+    }
+    set-option global picker_resuming false
+}
+define-command picker-resume -docstring 'reopen the last picker, with its query' %{
+    evaluate-commands %sh{
+        case $kak_opt_picker_last in
+            '') echo "fail 'no picker opened yet'" ;;
+            yazi | broot) echo "$kak_opt_picker_last" ;;
+            *) echo "set-option global picker_resuming true; picker-$kak_opt_picker_last" ;;
+        esac
+    }
+}
 
 define-command picker-files -docstring 'pick a file' %{ picker-popup files }
 define-command picker-grep  -docstring 'live grep'   %{ picker-popup grep }
@@ -420,11 +443,74 @@ define-command picker-buffers -docstring 'pick a buffer' %{ evaluate-commands %s
     printf 'picker-popup buffers %s\n' "$list"
 } }
 
+declare-option -hidden str picker_from   # buffer to return to
+declare-option -hidden str picker_client # client to show the picker for
+declare-option -hidden str picker_list     # diagnostics for the picker
+declare-option -hidden str picker_root     # ...and the project root they are relative to
+declare-option -hidden str picker_palette  # file holding the palette's mappings
+
+# Diagnostics of the open files on <space>d (Helix's <space>D). kak-lsp only
+# offers them as the *diagnostics* buffer (its reply comes later, with the "
+# register saved, so no RegisterModified). When that buffer gets its filetype, queue a command
+# with `kak -p`: it runs once the reply has filled the buffer, hands the lines
+# to fzf, and the picker returns to this buffer. <space>D (the plain list)
+# drops a pending picker.
+define-command picker-diagnostics -docstring 'pick a diagnostic of the open files' %{
+    remove-hooks global picker-diagnostics
+    hook -group picker-diagnostics global BufSetOption filetype=lsp-diagnostics %{
+        nop %sh{ (
+            printf 'evaluate-commands -client %s picker-diagnostics-show\n' "$kak_opt_picker_client" |
+                kak -p "$kak_session"
+        ) >/dev/null 2>&1 </dev/null & }
+        remove-hooks global picker-diagnostics   # last: it ends this hook
+    }
+    set-option global picker_from %val{bufname}
+    set-option global picker_client %val{client}   # (kak-lsp replies have none)
+    lsp-diagnostics
+}
+define-command -hidden picker-diagnostics-show %{
+    evaluate-commands -buffer *diagnostics* %{
+        execute-keys '%'
+        set-option global picker_list %sh{
+            list=$(mktemp "${TMPDIR:-/tmp}/kak-diagnostics.XXXXXX")
+            printf '%s\n' "$kak_selection" | sed 's/ -- Description: .*//' | grep . >"$list"
+            printf %s "$list"
+        }
+        set-option global picker_root %opt{lsp_project_root}
+    }
+    picker-popup diagnostics %opt{picker_list} %opt{picker_root} %opt{picker_from}
+}
+
+# Every mapping that has a description (Helix's <space>? command palette); the
+# chosen one's keys are typed into this tmux pane, so prompts and keys that
+# wait for another key work as usual. The mappings are read once per session
+# (`debug mappings` writes to the read-only *debug* buffer, which can't be
+# cleaned up); :picker-palette-refresh reads them again.
+define-command picker-palette -docstring 'pick a key mapping by its description' %{
+    evaluate-commands %sh{ [ -s "$kak_opt_picker_palette" ] || echo picker-palette-refresh }
+    picker-popup palette %opt{picker_palette} %val{client_env_TMUX_PANE}
+}
+define-command picker-palette-refresh -docstring 're-read the mappings for the palette' %{
+    debug mappings
+    evaluate-commands -buffer *debug* %{
+        execute-keys 'ge<a-/>^Mappings:<ret>Ge'
+        set-option global picker_palette %sh{
+            list=${TMPDIR:-/tmp}/kak-palette-$kak_session
+            printf '%s\n' "$kak_selection" >"$list"
+            printf %s "$list"
+        }
+    }
+}
+hook global KakEnd .* %{ nop %sh{ rm -f "$kak_opt_picker_palette" } }
+
 map global user f ':picker-files<ret>'   -docstring 'files'
 map global user / ':picker-grep<ret>'    -docstring 'live grep'
 map global user , ':picker-buffers<ret>' -docstring 'buffer picker'
 map global user e ':yazi<ret>'           -docstring 'yazi file manager'
 map global user E ':broot<ret>'          -docstring 'broot file tree'
+map global user d ':picker-diagnostics<ret>' -docstring 'diagnostics picker'
+map global user ? ':picker-palette<ret>' -docstring 'command palette (all keys)'
+map global user <quote> ':picker-resume<ret>' -docstring 'last picker'
 
 # ─── buffers ──────────────────────────────────────────────────────────────────
 # ga (last buffer) is built in; gn / gp match Helix.
@@ -462,6 +548,45 @@ map global user t ':enter-user-mode tree-sitter<ret>' -docstring 'tree-sitter'
 map global normal <a-up>   ":tree-sitter-nav '""parent""'<ret>"
 map global normal <a-down> ":tree-sitter-nav '""first_child""'<ret>"
 
+# ─── remember the cursor position ─────────────────────────────────────────────
+# Reopening a file puts the cursor where it was. Positions are kept in
+# ~/.local/state/kak/positions ("line col<tab>path", newest last), written on
+# save and when the buffer is closed (Kakoune closes every buffer on quit).
+# A line given explicitly (kak file +10, gd, grep and picker jumps) still wins:
+# it is applied later.
+declare-option -hidden str cursor_pos_last
+declare-option -hidden str cursor_pos_restore
+hook global NormalIdle .* %{ set-option buffer cursor_pos_last "%val{cursor_line} %val{cursor_column}" }
+define-command -hidden cursor-pos-save %{ nop %sh{
+    [ -f "$kak_buffile" ] && [ -n "$kak_opt_cursor_pos_last" ] || exit 0
+    case $kak_buffile in */.git/*) exit 0 ;; esac
+    f=${XDG_STATE_HOME:-$HOME/.local/state}/kak/positions
+    mkdir -p "${f%/*}"
+    printf '%s\t%s\n' "$kak_opt_cursor_pos_last" "$kak_buffile" >>"$f"
+    # keep only the newest entry per file once the list grows
+    if [ "$(wc -l <"$f")" -gt 2000 ]; then
+        awk -F '\t' '{ last[$2] = NR; line[NR] = $0 } END { for (n = 1; n <= NR; n++) if (last[substr(line[n], index(line[n], "\t") + 1)] == n) print line[n] }' "$f" >"$f.tmp" &&
+            mv "$f.tmp" "$f"
+    fi
+} }
+hook global BufWritePost .* cursor-pos-save
+hook global BufClose     .* cursor-pos-save
+hook global BufOpenFile  .* %{ evaluate-commands %sh{
+    f=${XDG_STATE_HOME:-$HOME/.local/state}/kak/positions
+    [ -f "$f" ] || exit 0
+    pos=$(awk -F '\t' -v p="$kak_buffile" '$2 == p { pos = $1 } END { print pos }' "$f")
+    [ -n "$pos" ] && echo "set-option buffer cursor_pos_restore '$pos'"
+} }
+hook global WinDisplay .* %{
+    evaluate-commands %sh{
+        [ -n "$kak_opt_cursor_pos_restore" ] || exit 0
+        set -- $kak_opt_cursor_pos_restore
+        echo "set-option buffer cursor_pos_restore ''"
+        echo "try %{ select $1.$2,$1.$2 } catch %{ execute-keys ge }"
+        echo "execute-keys vc"
+    }
+}
+
 # ─── misc ─────────────────────────────────────────────────────────────────────
 define-command -hidden popup -params 1.. -docstring 'run a command in a tmux popup' %{ nop %sh{
     tmux display-popup -E -w 90% -h 90% -d "$PWD" "$@" >/dev/null 2>&1 </dev/null &
@@ -493,20 +618,53 @@ define-command diffnav -params .. -docstring 'diffnav [<git diff args>]: browse 
 
 # easifem build / test (same scripts as Helix's "+" mode)
 # Builds run in the background (bin/easifem-build); Kakoune and macOS report
-# the result, and <space>+ l opens the log of the latest build.
+# the result, <space>+ l opens the log of the latest build and <space>+ e lists
+# its compiler errors (bin/easifem-errors) in a *make*-style buffer.
 define-command easifem-build -params 1 -docstring 'easifem-build <base|classes>: build and install in the background' %{
     nop %sh{ "$kak_config/bin/easifem-build" "$kak_session" "$kak_client" "$1" >/dev/null 2>&1 </dev/null & }
     echo -markup "{Information}easifem: building %arg{1} in the background"
 }
 define-command easifem-build-base    %{ easifem-build base }
 define-command easifem-build-classes %{ easifem-build classes }
-define-command easifem-build-log -params ..1 -docstring 'easifem-build-log [base|classes]: open a build log (default: the latest)' %{
+declare-option -hidden str easifem_log
+define-command -hidden easifem-find-log -params ..1 %{
     evaluate-commands %sh{
         dir=${XDG_CACHE_HOME:-$HOME/.cache}/easifem
         if [ -n "$1" ]; then log=$dir/easifem-build-$1-log.txt
         else log=$(ls -t "$dir"/easifem-build-*-log.txt 2>/dev/null | head -n 1); fi
         [ -f "$log" ] || { echo "fail 'easifem: no build log yet'"; exit; }
-        printf "edit -existing '%s'\nset-option buffer autoreload yes\n" "$log"
+        printf "set-option global easifem_log '%s'\n" "$log"
+    }
+}
+define-command easifem-build-log -params ..1 -docstring 'easifem-build-log [base|classes]: open a build log (default: the latest)' %{
+    easifem-find-log %arg{@}
+    edit -existing %opt{easifem_log}
+    set-option buffer autoreload yes
+}
+# <ret> on an error opens it (as in the *make* buffer of :make).
+define-command easifem-build-errors -params ..1 -docstring 'easifem-build-errors [base|classes]: list the compiler errors of a build (default: the latest)' %{
+    easifem-find-log %arg{@}
+    evaluate-commands -save-regs '"' %sh{
+        # paths under the working directory are shown relative to it
+        errors=$("$kak_config/bin/easifem-errors" "$kak_opt_easifem_log" |
+            awk -v p="$PWD/" 'index($0, p) == 1 { $0 = substr($0, length(p) + 1) } 1')
+        if [ -z "$errors" ]; then
+            if grep -q '^# finished: exit 0 ' "$kak_opt_easifem_log"; then
+                echo "echo 'easifem: the last build had no errors'"
+            else
+                echo "fail 'easifem: no compiler errors found; <space>+ l opens the log'"
+            fi
+            exit
+        fi
+        n=$(printf '%s\n' "$errors" | wc -l | tr -d ' ')
+        printf "set-register '\"' '"
+        printf '%s\n' "$errors" | sed "s/'/''/g"
+        echo "'"
+        echo 'edit! -scratch *easifem-errors*'
+        echo 'set-option buffer filetype make'
+        echo 'set-option buffer jump_current_line 0'
+        echo "execute-keys '%Rgg'"
+        echo "echo 'easifem: $n error(s); <ret> opens one, <space>+ n / p the next / previous'"
     }
 }
 define-command easifem-run-test -docstring 'easifem run on this file' %{
@@ -524,6 +682,9 @@ map global user    + ':enter-user-mode easifem<ret>'   -docstring 'easifem build
 map global easifem b ':easifem-build-base<ret>'        -docstring 'build base'
 map global easifem c ':easifem-build-classes<ret>'     -docstring 'build classes'
 map global easifem l ':easifem-build-log<ret>'         -docstring 'open the latest build log'
+map global easifem e ':easifem-build-errors<ret>'      -docstring 'list the errors of the latest build'
+map global easifem n ':jump-next *easifem-errors*<ret>'     -docstring 'next build error'
+map global easifem p ':jump-previous *easifem-errors*<ret>' -docstring 'previous build error'
 map global easifem + ':easifem-run-test<ret>'          -docstring 'run test for this file'
 
 # ─── match / surround (Helix's `m` mode) ──────────────────────────────────────
@@ -694,6 +855,21 @@ hook global ModeChange .*:normal %{ set-option window modeline_mode 'NOR'; set-f
 hook global ModeChange .*:insert %{ set-option window modeline_mode 'INS'; set-face window ModelineMode ModeInsert }
 hook global ModeChange .*:prompt %{ set-option window modeline_mode 'CMD'; set-face window ModelineMode ModePrompt }
 
+# The cursor turns green in insert mode, as in Helix (a terminal cursor shape
+# can't be set from Kakoune, but the colour can).
+hook global ModeChange .*:insert %{
+    set-face window PrimaryCursor      PrimaryCursorInsert
+    set-face window PrimaryCursorEol   PrimaryCursorInsert
+    set-face window SecondaryCursor    SecondaryCursorInsert
+    set-face window SecondaryCursorEol SecondaryCursorInsert
+}
+hook global ModeChange .*:insert:.* %{
+    unset-face window PrimaryCursor
+    unset-face window PrimaryCursorEol
+    unset-face window SecondaryCursor
+    unset-face window SecondaryCursorEol
+}
+
 # File name only, not the path; computed once per buffer, not on every redraw.
 declare-option -hidden str modeline_bufname
 hook global BufCreate .* %{ set-option buffer modeline_bufname %sh{ printf %s "${kak_bufname##*/}" } }
@@ -724,7 +900,7 @@ set-option -add global modelinefmt ' {ModelineError}● %opt{lsp_diagnostic_erro
 # such as *debug* are skipped.
 define-command -hidden git-refresh %{
     modeline-update-branch
-    evaluate-commands %sh{ [ -n "$kak_opt_modeline_branch" ] && [ -f "$kak_buffile" ] && echo 'git show-diff' }
+    evaluate-commands %sh{ [ -n "$kak_opt_modeline_branch" ] && [ -f "$kak_buffile" ] && echo 'gitsigns-show' }
 }
 define-command -hidden gitsigns-update %{
     evaluate-commands %sh{ [ -n "$kak_opt_modeline_branch" ] && [ -f "$kak_buffile" ] && echo 'git update-diff' }
@@ -732,17 +908,22 @@ define-command -hidden gitsigns-update %{
 hook global BufWritePost .*                %{ gitsigns-update }
 hook global ModeChange   pop:insert:normal %{ gitsigns-update }
 hook global BufReload    .*                %{ gitsigns-update }
-# The gutter column is as wide as its widest flag, so it would appear (and
-# shift the text) with the first change. A blank flag on line 0, which is
-# never drawn, keeps it one column wide; kak-lsp does the same for diagnostics.
-# (The hook parameter does not show line-specs values, hence the shell test.)
+# The gutter column is as wide as its widest flag, so git's own column would
+# appear (and shift the text) with the first change. So draw a copy of git's
+# flags plus a blank flag on line 0, which is never drawn but keeps the column
+# one wide; kak-lsp does the same for diagnostics. (A copy, because setting
+# git_diff_flags from its own hook is a recursive hook call.)
+declare-option -hidden line-specs gitsigns_flags
 hook global BufSetOption git_diff_flags=.* %{
-    evaluate-commands %sh{
-        case $kak_quoted_opt_git_diff_flags in
-            *"'0| '"*) ;;
-            *) echo "set-option buffer git_diff_flags $kak_quoted_opt_git_diff_flags '0| '" ;;
-        esac
-    }
+    set-option buffer gitsigns_flags %opt{git_diff_flags} '0| '
+}
+define-command -hidden gitsigns-show %{
+    git show-diff
+    try %{ remove-highlighter window/git-diff }
+    try %{ add-highlighter window/gitsigns flag-lines Default gitsigns_flags }
+}
+define-command -hidden gitsigns-hide %{
+    try %{ remove-highlighter window/gitsigns }
 }
 
 # Revert rewrites the file from git, so unsaved edits would be mixed in.
@@ -760,5 +941,5 @@ map global git  u ':git apply --cached --reverse<ret>' -docstring 'unstage selec
 map global git  r ':gitsigns-revert<ret>'            -docstring 'revert selected lines to the index'
 map global git  b ':git blame<ret>'                  -docstring 'toggle blame (<ret>: show commit)'
 map global git  d ':git diff -- %val{buffile}<ret>'  -docstring 'diff of this file'
-map global git  h ':git hide-diff<ret>'              -docstring 'hide the marks (<space>hg shows them)'
-map global git  g ':git show-diff<ret>'              -docstring 'show the marks'
+map global git  h ':gitsigns-hide<ret>'             -docstring 'hide the marks (<space>hg shows them)'
+map global git  g ':gitsigns-show<ret>'             -docstring 'show the marks'

@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 # fzf pickers for Kakoune, run inside a tmux popup.
-# usage: kak-picker <session> <client> <files|grep|buffers|yazi|broot> [list-file|start-path]
-# The choice is sent back to the Kakoune client with `kak -p`.
+# usage: kak-picker <session> <client> <mode> [args]
+#   files | grep | buffers <list> | yazi <start> | broot <start>
+#   diagnostics <list> <project-root> <buffer> | palette <mappings> <tmux-pane>
+# The choice is sent back to the Kakoune client with `kak -p`. The fzf
+# pickers start from $KAK_PICKER_QUERY and send their query back as well.
 
 session=$1 client=$2 mode=$3 list=$4
 
@@ -12,16 +15,44 @@ send() { printf 'evaluate-commands -client %s -- %s\n' "$client" "$(kq "$1")" | 
 
 preview='bat --color=always --style=numbers --line-range=:300 {} 2>/dev/null || cat {}'
 
+# fzf that remembers its query (also on <esc>) for <space>'. Prints the choice.
+pick() {
+    local out q sel
+    out=$(fzf --query "${KAK_PICKER_QUERY-}" --print-query --bind 'esc:print-query' "$@")
+    { IFS= read -r q; IFS= read -r sel; } <<<"$out"
+    send "set-option global picker_query $(kq "$q")"
+    [ -n "$sel" ] && printf '%s\n' "$sel"
+}
+
+# Kakoune key names (<space>hn) as tmux send-keys arguments, one per line.
+tmux_keys() {
+    local s=$1 k
+    while [ -n "$s" ]; do
+        if [[ $s == '<'*'>'* ]]; then
+            k=${s%%>*} k=${k#<} s=${s#*>}
+            case $k in
+            space) echo Space ;; ret) echo Enter ;; esc) echo Escape ;; tab) echo Tab ;;
+            minus) echo - ;; plus) echo + ;; lt) echo '<' ;; gt) echo '>' ;;
+            semicolon) echo '\;' ;; quote) echo "'" ;; dquote) echo '"' ;; percent) echo % ;;
+            a-*) echo "M-${k#a-}" ;; c-*) echo "C-${k#c-}" ;; *) echo "$k" ;;
+            esac
+        else
+            echo "${s:0:1}"
+            s=${s:1}
+        fi
+    done
+}
+
 case $mode in
 files)
     sel=$(fd --type f --hidden --exclude .git --exclude build |
-        fzf --prompt='files> ' --preview "$preview") || exit 0
+        pick --prompt='files> ' --preview "$preview") || exit 0
     send "edit -existing $(kq "$sel")"
     ;;
 grep)
     # live grep: rg reruns on every keystroke, fzf only displays.
     rg_cmd='rg --line-number --column --no-heading --color=always --smart-case --'
-    sel=$(: | fzf --ansi --disabled --prompt='grep> ' \
+    sel=$(: | pick --ansi --disabled --prompt='grep> ' \
         --bind "start:reload:$rg_cmd {q} || true" \
         --bind "change:reload:$rg_cmd {q} || true" \
         --delimiter : \
@@ -31,7 +62,7 @@ grep)
     send "edit -existing $(kq "$file") $line $col"
     ;;
 buffers)
-    sel=$(fzf --prompt='buffers> ' --preview "$preview" <"$list")
+    sel=$(pick --prompt='buffers> ' --preview "$preview" <"$list")
     rm -f "$list"
     [ -n "$sel" ] && send "buffer $(kq "$sel")"
     ;;
@@ -72,5 +103,55 @@ broot)
     conf="$HOME/.config/broot/conf.hjson;$(dirname "$0")/../broot/kak.hjson"
     sel=$(broot --conf "$conf" "$list") || exit 0
     [ -f "$sel" ] && send "edit -existing $(kq "$sel")"
+    ;;
+diagnostics)
+    # $4: "path:line:col: [severity][server]... message" lines, paths relative
+    # to the project root $5; $6 is the buffer to return to. The client shows
+    # the *diagnostics* buffer meanwhile, so close it either way.
+    root=$5 back="buffer $(kq "$6")"
+    if [ ! -s "$list" ]; then
+        back="$back; echo 'no diagnostics'"
+    elif cd "$root"; then
+        sel=$(pick --prompt='diagnostics> ' --delimiter : \
+            --preview 'bat --color=always --style=numbers --highlight-line {2} {1}' \
+            --preview-window '+{2}/2' <"$list")
+    fi
+    rm -f "$list"
+    if [ -n "$sel" ]; then
+        IFS=: read -r file line col _ <<<"$sel"
+        back="edit -existing $(kq "$root$file") $line $col"
+    fi
+    send "$back; try %{ delete-buffer *diagnostics* }"
+    ;;
+palette)
+    # $4: the output of `debug mappings` (kept for the session); $5: the
+    # client's tmux pane. Lists each described mapping with the keys that
+    # reach it (following modes entered from normal mode, <space>, g or v)
+    # and types the chosen keys.
+    pane=$5
+    sel=$(perl -ne '
+        push @m, [$1, $2, $3, $4] if /^ \* (\S+) (\S+): \x27([^\x27]*)\x27 ?(.*)$/;
+        END {
+            my %pre = (normal => "", user => "<space>", goto => "g", view => "v");
+            for (1 .. 3) {
+                for (@m) {
+                    my ($mode, $key, $rhs) = @$_;
+                    next unless exists $pre{$mode} and $rhs =~
+                        /enter<minus>user<minus>mode<space>(?:<minus>lock<space>)?((?:[^<]|<minus>)+)<ret>/;
+                    (my $name = $1) =~ s/<minus>/-/g;
+                    $pre{$name} //= $pre{$mode} . $key;
+                }
+            }
+            for (@m) {
+                my ($mode, $key, $rhs, $doc) = @$_;
+                next unless length $doc and exists $pre{$mode};
+                my $keys = $pre{$mode} . $key;
+                printf "%-50s %-14s %s\t%s\n", $doc, $keys, $mode, $keys;
+            }
+        }' "$list" | pick --prompt='keys> ' --delimiter '\t' --with-nth 1 --no-sort)
+    [ -n "$sel" ] || exit 0
+    keys=()
+    while IFS= read -r k; do keys+=("$k"); done < <(tmux_keys "${sel##*$'\t'}")
+    tmux send-keys -t "$pane" "${keys[@]}"
     ;;
 esac

@@ -47,6 +47,9 @@ evaluate-commands %sh{
     set-face global SecondaryCursor    ${crust},${overlay2}+fg
     set-face global PrimaryCursorEol   ${crust},${sapphire}+fg
     set-face global SecondaryCursorEol ${crust},${overlay2}+fg
+    # insert mode (kakrc swaps these in), as Helix's cursor.primary.insert
+    set-face global PrimaryCursorInsert   ${crust},${green}+fg
+    set-face global SecondaryCursorInsert ${crust},rgb:7ea87f+fg
     set-face global LineNumbers        ${surface1},${bg}
     set-face global LineNumberCursor   ${lavender},${bg}+b
     set-face global LineNumbersWrapped ${surface0},${bg}
@@ -78,6 +81,7 @@ evaluate-commands %sh{
     set-face global BufferPadding      ${surface0},${bg}
     set-face global Whitespace         ${surface1}+f
     set-face global WrapMarker         Whitespace
+    set-face global WhitespaceIndent   ${surface0}
 
     # kak-lsp
     set-face global InlayHint                ${overlay0}+i
