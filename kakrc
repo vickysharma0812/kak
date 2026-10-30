@@ -9,7 +9,7 @@
 #   <space>a  code action    <space>r  rename          <space>k  hover
 #   <space>=  format         <space>c  comment         <space>t  tree-sitter
 #   <space>l  all LSP cmds (l s goto symbol, l S symbol list)
-#   <space>g  lazygit        <space>+  easifem build/test
+#   <space>g  lazygit        <space>G  diffnav         <space>+  easifem build/test
 #   gd / gr / gy             definition / references / type definition
 #   m         match / surround (mm ms mr md mi ma), as in Helix
 #   gw        jump to a word by its two-letter label, as in Helix
@@ -474,6 +474,23 @@ define-command lazygit -docstring 'lazygit in a popup' %{
     }
 }
 
+# Uncommitted changes (staged and not) by default; any `git diff` arguments
+# work too: :diffnav --cached, :diffnav main, :diffnav HEAD~3 -- src
+define-command diffnav -params .. -docstring 'diffnav [<git diff args>]: browse a diff in a popup (default: git diff HEAD)' %{
+    evaluate-commands %sh{
+        [ $# -eq 0 ] && set -- HEAD
+        git diff --quiet "$@" >/dev/null 2>&1
+        case $? in
+            0) echo "echo 'diffnav: no changes'"; exit ;;
+            1) ;;
+            *) echo "fail 'diffnav: git diff failed (not a repository, or a bad revision?)'"; exit ;;
+        esac
+        printf "popup sh -c 'git --no-pager diff \"\$@\" | diffnav' diffnav"
+        for a; do printf " '%s'" "$(printf %s "$a" | sed "s/'/''/g")"; done
+        echo
+    }
+}
+
 # easifem build / test (same scripts as Helix's "+" mode)
 # Builds run in the background (bin/easifem-build); Kakoune and macOS report
 # the result, and <space>+ l opens the log of the latest build.
@@ -501,6 +518,7 @@ define-command easifem-run-test -docstring 'easifem run on this file' %{
 
 map global user c ':comment-line<ret>' -docstring 'comment lines'
 map global user g ':lazygit<ret>'      -docstring 'lazygit'
+map global user G ':diffnav<ret>'      -docstring 'diffnav: uncommitted changes'
 declare-user-mode easifem
 map global user    + ':enter-user-mode easifem<ret>'   -docstring 'easifem build/test'
 map global easifem b ':easifem-build-base<ret>'        -docstring 'build base'

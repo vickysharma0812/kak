@@ -388,9 +388,15 @@ shows the branch.
 | `<space>h` `d` | diff of this file in a buffer |
 | `<space>h` `h` / `g` | hide / show the marks |
 | `<space>g` | lazygit (commit, push, branches) |
+| `<space>G` | diffnav: browse all uncommitted changes (staged and not) with a file tree; `q` closes |
 
 Revert changes the file on disk and reloads it, so it refuses while the buffer
 has unsaved edits (`:w` first). Check the selection before pressing `r`.
+
+`:diffnav` takes any `git diff` arguments, for other diffs: `:diffnav --cached`
+(staged only), `:diffnav main` (against a branch), `:diffnav HEAD~3 -- src`.
+It shows saved changes only, and new untracked files are not in `git diff`
+until you `git add` them. In diffnav, `e` toggles the file tree and `/` searches.
 
 ## easifem
 

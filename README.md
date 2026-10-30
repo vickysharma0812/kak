@@ -51,7 +51,7 @@ formatters, tree-sitter grammar, theme and space-leader keys.
 | `gd` / `gr` / `gy` | definition / references / type definition | `<space>l` | all LSP commands (`s` goto symbol, `S` symbol list) |
 | `<space>=` | format | `<space>c` | comment lines |
 | `<space>t` | tree-sitter menu | `<a-up>` / `<a-down>` | select parent / child node |
-| `<space>g` | lazygit | `<space>+` | easifem background build (`b`, `c`), build log (`l`), run test (`+`) |
+| `<space>g` / `<space>G` | lazygit / diffnav | `<space>+` | easifem background build (`b`, `c`), build log (`l`), run test (`+`) |
 | `<space>h` | git: next/prev change, stage, revert, blame | | |
 | `<space>p` / `<space>P` | paste from clipboard | `mm` | matching bracket |
 | `gw` | jump to a word by its label | | |
@@ -67,7 +67,7 @@ from **fish** (which sets `SNIPPETS_PATH`).
 
 - Kakoune, plus `cargo install kak-lsp kak-tree-sitter ktsctl`
 - The language servers and formatters in the table above
-- `fd`, `ripgrep`, `fzf`, `bat`, `yazi`, `broot`, `lazygit`, `perl`
+- `fd`, `ripgrep`, `fzf`, `bat`, `yazi`, `broot`, `lazygit`, `diffnav`, `perl`
 - Helix with its grammars built (`hx --grammar build`): kak-tree-sitter reads the
   Fortran, TOML and Markdown grammars and queries in `~/.config/helix/runtime`, and
   Markdown's inline grammar from Homebrew's Helix (`/opt/homebrew/opt/helix`).
