@@ -32,7 +32,9 @@ formatters, tree-sitter grammar, theme and space-leader keys.
 - **Helix-like completion**: `<tab>`/`<s-tab>` or `<down>`/`<up>` move through the menu, `<ret>` accepts.
 - **Git signs**: added / changed / deleted line marks (like gitsigns), hunk jumps,
   stage / revert selected lines and blame, using Kakoune's built-in `git` command.
-- Catppuccin Mocha theme matching Helix's, and a Helix-style modeline with the git branch.
+- Catppuccin Mocha theme matching Helix's, drawn on the terminal's own background
+  so Ghostty's `background-opacity` shows through, and a Helix-style modeline
+  with the git branch.
 
 ## Keys
 
@@ -41,7 +43,7 @@ formatters, tree-sitter grammar, theme and space-leader keys.
 | Key | Action | Key | Action |
 |---|---|---|---|
 | `<space>f` | files | `<space>/` | live grep |
-| `<space>,` | buffer picker | `<space>e` / `<space>E` | broot / yazi |
+| `<space>,` | buffer picker | `<space>e` / `<space>E` | yazi / broot |
 | `<space>b` | buffer mode | `gn` / `gp` / `ga` | next / previous / last buffer |
 | `<space>k` | hover | `<space>a` | code action |
 | `<space>r` | rename | `<space>d` | diagnostics |

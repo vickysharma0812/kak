@@ -302,8 +302,8 @@ Registers worth knowing: `"` last yank/delete, `/` last search, `@` last macro,
 | Key | Action |
 |---|---|
 | `<space>f` | find a file (fzf) |
-| `<space>e` | broot: type to filter the tree, `<ret>` on a file opens it (on a folder, enters it); `<esc>` goes back / quits |
-| `<space>E` | yazi: pick a file, `<ret>` opens it in this session |
+| `<space>e` | yazi: pick a file, `<ret>` opens it in this session |
+| `<space>E` | broot: type to filter the tree, `<ret>` on a file opens it (on a folder, enters it); `<esc>` goes back / quits |
 | `<space>,` | pick an open buffer |
 | `gn` / `gp` / `ga` | next / previous / last buffer |
 | `<space>b` | buffer menu: `q` close, `Q` close and discard, `o` close others, `w` / `W` write / write all |
@@ -563,5 +563,5 @@ Then restart Kakoune (each session starts its own kak-lsp).
 - **No snippets**: start Kakoune from fish (it sets `SNIPPETS_PATH`), and check
   that `bin/scls-kak` exists; see [Patched tools](#scls)
 - **Pickers do nothing**: Kakoune must run inside tmux
-- **`<space>e` (broot) opens nothing**: `<ret>` must be on a file, not a folder;
+- **`<space>E` (broot) opens nothing**: `<ret>` must be on a file, not a folder;
   check `broot/kak.hjson` exists

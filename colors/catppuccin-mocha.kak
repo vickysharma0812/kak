@@ -10,6 +10,9 @@ evaluate-commands %sh{
     overlay0="rgb:6c7086";  surface2="rgb:585b70"; surface1="rgb:45475a"
     surface0="rgb:313244";  base="rgb:1e1e2e";     mantle="rgb:181825"
     crust="rgb:11111b"
+    # Editor background: the terminal's own (Catppuccin base in Ghostty), so
+    # Ghostty's background-opacity shows through. Set to ${base} for opaque.
+    bg=default
 
     cat <<EOF
     # code (regex highlighters, used where tree-sitter is not active)
@@ -37,22 +40,22 @@ evaluate-commands %sh{
     set-face global list               ${text}
 
     # interface
-    set-face global Default            ${text},${base}
+    set-face global Default            ${text},${bg}
     set-face global PrimarySelection   default,${surface2}+g
     set-face global SecondarySelection default,${surface1}+g
     set-face global PrimaryCursor      ${crust},${rosewater}+fg
     set-face global SecondaryCursor    ${crust},${overlay2}+fg
     set-face global PrimaryCursorEol   ${crust},${sapphire}+fg
     set-face global SecondaryCursorEol ${crust},${overlay2}+fg
-    set-face global LineNumbers        ${surface1},${base}
-    set-face global LineNumberCursor   ${lavender},${base}+b
-    set-face global LineNumbersWrapped ${surface0},${base}
+    set-face global LineNumbers        ${surface1},${bg}
+    set-face global LineNumberCursor   ${lavender},${bg}+b
+    set-face global LineNumbersWrapped ${surface0},${bg}
     set-face global MenuForeground     ${crust},${lavender}+b
     set-face global MenuBackground     ${subtext0},${mantle}
     set-face global MenuInfo           ${overlay0},${mantle}
     set-face global Information        ${text},${mantle}
-    set-face global InlineInformation  ${overlay2},${base}
-    set-face global Error              ${red},${base}+b
+    set-face global InlineInformation  ${overlay2},${bg}
+    set-face global Error              ${red},${bg}+b
     set-face global DiagnosticError    ${red}
     set-face global DiagnosticWarning  ${yellow}
     set-face global StatusLine         ${text},${surface0}
@@ -72,7 +75,7 @@ evaluate-commands %sh{
     set-face global ModelineError      ${red},${surface0}
     set-face global ModelineWarning    ${yellow},${surface0}
     set-face global MatchingChar       ${peach},${surface1}+b
-    set-face global BufferPadding      ${surface0},${base}
+    set-face global BufferPadding      ${surface0},${bg}
     set-face global Whitespace         ${surface1}+f
     set-face global WrapMarker         Whitespace
 

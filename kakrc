@@ -3,7 +3,7 @@
 #
 # Leader is <space> (Kakoune's user mode), like Helix's space mode.
 #   <space>f  files          <space>/  live grep       <space>,  buffer picker
-#   <space>e  broot          <space>E  yazi            <space>h  git hunks / blame
+#   <space>e  yazi           <space>E  broot           <space>h  git hunks / blame
 #   <space>b  buffer mode    gn / gp   next / prev buffer   ga  last buffer
 #   <space>s  goto symbol    <space>S  workspace syms  <space>d  diagnostics
 #   <space>a  code action    <space>r  rename          <space>k  hover
@@ -423,8 +423,8 @@ define-command picker-buffers -docstring 'pick a buffer' %{ evaluate-commands %s
 map global user f ':picker-files<ret>'   -docstring 'files'
 map global user / ':picker-grep<ret>'    -docstring 'live grep'
 map global user , ':picker-buffers<ret>' -docstring 'buffer picker'
-map global user e ':broot<ret>'          -docstring 'broot file tree'
-map global user E ':yazi<ret>'           -docstring 'yazi file manager'
+map global user e ':yazi<ret>'           -docstring 'yazi file manager'
+map global user E ':broot<ret>'          -docstring 'broot file tree'
 
 # ─── buffers ──────────────────────────────────────────────────────────────────
 # ga (last buffer) is built in; gn / gp match Helix.
@@ -702,13 +702,14 @@ set-option -add global modelinefmt ' {ModelineError}● %opt{lsp_diagnostic_erro
 # ─── git signs (like gitsigns / Helix's diff gutter) ──────────────────────────
 # Kakoune's stdlib `git` command does the work: show-diff marks added (green),
 # changed (blue) and deleted (red) lines against the index, so staging a change
-# clears its marks. Files outside a repo (empty branch) are skipped.
+# clears its marks. Files outside a repo (empty branch) and scratch buffers
+# such as *debug* are skipped.
 define-command -hidden git-refresh %{
     modeline-update-branch
-    evaluate-commands %sh{ [ -n "$kak_opt_modeline_branch" ] && echo 'git show-diff' }
+    evaluate-commands %sh{ [ -n "$kak_opt_modeline_branch" ] && [ -f "$kak_buffile" ] && echo 'git show-diff' }
 }
 define-command -hidden gitsigns-update %{
-    evaluate-commands %sh{ [ -n "$kak_opt_modeline_branch" ] && echo 'git update-diff' }
+    evaluate-commands %sh{ [ -n "$kak_opt_modeline_branch" ] && [ -f "$kak_buffile" ] && echo 'git update-diff' }
 }
 hook global BufWritePost .*                %{ gitsigns-update }
 hook global ModeChange   pop:insert:normal %{ gitsigns-update }
