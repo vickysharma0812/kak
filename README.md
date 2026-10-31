@@ -8,7 +8,7 @@ formatters, tree-sitter grammar, theme and space-leader keys.
 ## Features
 
 - **Tree-sitter highlighting** via [kak-tree-sitter](https://sr.ht/~hadronized/kak-tree-sitter/),
-  reusing Helix's grammars and queries for Fortran, TOML and Markdown (code blocks
+  reusing Helix's grammars and queries for Fortran, TOML, Markdown, CMake and JSON (code blocks
   in Markdown are highlighted in their own language).
 - **Soft wrap** at word boundaries for every file type, as in Helix.
 - **Indent guides**, a **green cursor in insert mode** and `gw` jump labels, as in Helix.
@@ -22,9 +22,10 @@ formatters, tree-sitter grammar, theme and space-leader keys.
   | Fortran | zfls, fortitude, efm-langserver (gfortran), scls | fprettier |
   | CMake | neocmakelsp, scls | gersemi |
   | TOML | taplo, tombi | taplo |
-  | Markdown | marksman, rumdl, scls | rumdl |
+  | Markdown | none | rumdl (`rumdl fmt`) |
   | LaTeX | texlab, digestif, scls | texlab (latexindent) |
   | BibTeX | texlab, scls | bibtex-tidy |
+  | JSON (e.g. snippet files) | vscode-json-language-server | vscode-json-language-server |
 
 - **Snippets**: VSCode-style snippets from `$SNIPPETS_PATH`, shared with Helix and
   Neovim, served by a patched simple-completion-language-server (see below).
@@ -74,8 +75,8 @@ from **fish** (which sets `SNIPPETS_PATH`).
 - The language servers and formatters in the table above
 - `fd`, `ripgrep`, `fzf`, `bat`, `yazi`, `broot`, `lazygit`, `diffnav`, `perl`
 - Helix with its grammars built (`hx --grammar build`): kak-tree-sitter reads the
-  Fortran, TOML and Markdown grammars and queries in `~/.config/helix/runtime`, and
-  Markdown's inline grammar from Homebrew's Helix (`/opt/homebrew/opt/helix`).
+  Fortran, TOML, Markdown and CMake grammars and queries in `~/.config/helix/runtime`, and
+  Markdown's inline grammar and the JSON grammar from Homebrew's Helix (`/opt/homebrew/opt/helix`).
 
 ## Install
 
@@ -92,7 +93,7 @@ adjust it if Kakoune is installed elsewhere.
 | Path | What |
 |---|---|
 | `kakrc` | main config |
-| `kak-tree-sitter.toml` | kak-tree-sitter config (Fortran, TOML and Markdown grammars from Helix) |
+| `kak-tree-sitter.toml` | kak-tree-sitter config (Fortran, TOML, Markdown, CMake and JSON grammars from Helix) |
 | `autoload/fortran.kak` | Fortran filetype and indentation |
 | `colors/catppuccin-mocha.kak` | theme, including tree-sitter faces |
 | `bin/easifem-build` | background easifem build with log and notifications |

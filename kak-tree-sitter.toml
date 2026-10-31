@@ -6,7 +6,9 @@
 # which Helix's theme ignores (so `end do` keeps the keyword colour). Leaving it
 # out makes KTS ignore it the same way.
 [highlight]
-groups = ["function.call"]
+# "keyword.repeat", "keyword.modifier", "keyword.return": used by the CMake
+# queries; their faces fall back to ts_keyword, as Helix does.
+groups = ["function.call", "keyword.repeat", "keyword.modifier", "keyword.return"]
 
 # Fortran is not in the KTS defaults. Reuse the grammar and queries that Helix
 # already built from the tree-sitter-fortran fork, so both editors stay in sync.
@@ -44,3 +46,18 @@ path = "/opt/homebrew/opt/helix/libexec/runtime/grammars/markdown_inline.so"
 
 [language."markdown.inline".queries.source.local]
 path = "/opt/homebrew/opt/helix/libexec/runtime/queries/markdown.inline"
+
+# JSON (snippet files): ~/.config/helix/runtime has no JSON grammar, so use
+# Homebrew's Helix runtime, as Helix itself does.
+[grammar.json.source.local]
+path = "/opt/homebrew/opt/helix/libexec/runtime/grammars/json.so"
+
+[language.json.queries.source.local]
+path = "/opt/homebrew/opt/helix/libexec/runtime/queries/json"
+
+# CMake: Helix's grammar and queries, as for TOML.
+[grammar.cmake.source.local]
+path = "/Users/easifem/.config/helix/runtime/grammars/cmake.so"
+
+[language.cmake.queries.source.local]
+path = "/Users/easifem/.config/helix/runtime/queries/cmake"

@@ -16,9 +16,11 @@ send() { printf 'evaluate-commands -client %s -- %s\n' "$client" "$(kq "$1")" | 
 preview='bat --color=always --style=numbers --line-range=:300 {} 2>/dev/null || cat {}'
 
 # fzf that remembers its query (also on <esc>) for <space>'. Prints the choice.
+# ctrl-t shows / hides the preview, as in Helix's pickers.
 pick() {
     local out q sel
-    out=$(fzf --query "${KAK_PICKER_QUERY-}" --print-query --bind 'esc:print-query' "$@")
+    out=$(fzf --query "${KAK_PICKER_QUERY-}" --print-query \
+        --bind 'esc:print-query,ctrl-t:toggle-preview' "$@")
     { IFS= read -r q; IFS= read -r sel; } <<<"$out"
     send "set-option global picker_query $(kq "$q")"
     [ -n "$sel" ] && printf '%s\n' "$sel"

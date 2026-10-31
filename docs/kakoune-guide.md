@@ -312,10 +312,11 @@ Registers worth knowing: `"` last yank/delete, `/` last search, `@` last macro,
 | Key | Action |
 |---|---|
 | `<space>f` | find a file (fzf) |
-| `<space>e` | yazi: pick a file, `<ret>` opens it in this session |
+| `<space>e` | yazi: pick a file, `<ret>` opens it in this session (bulk rename, `r` on selected files, edits the names in your `$EDITOR`) |
 | `<space>E` | broot: type to filter the tree, `<ret>` on a file opens it (on a folder, enters it); `<esc>` goes back / quits |
 | `<space>,` | pick an open buffer |
 | `<space>'` | reopen the last picker with the text you had typed (also after `<esc>`) |
+| `ctrl-t` (in a picker) | show / hide the preview, as in Helix |
 | `<space>?` | command palette: every key with a description; type a few words (`goto symbol`, `stage`), `<ret>` presses its keys |
 | `gn` / `gp` / `ga` | next / previous / last buffer |
 | `<space>b` | buffer menu: `q` close, `Q` close and discard, `o` close others, `w` / `W` write / write all |
@@ -359,21 +360,24 @@ In insert mode the menu appears as you type:
   replaces the default, skipping keeps it
 
 Snippets are the shared VSCode-style ones in `~/.config/nvim/snippets`.
+Editing those `.json` files, you get JSON highlighting, an error mark as soon as
+the JSON is broken (a missing comma, an unclosed bracket), and formatting on save
+or `<space>=` (vscode-json-language-server, as in Helix). Restart Kakoune after
+editing them so the snippet server reads them again.
 
 ## Writing Markdown
 
-No preview: Markdown is edited as text, with the same help as in Helix.
+No preview and no language server: Markdown is edited as plain text.
 
 - **Highlighting** (tree-sitter): headings coloured by level, bold, italic,
   `` `code` ``, links, list markers, checkboxes, quotes. A fenced code block
   (```` ```fortran ````) is highlighted in its language.
 - **Soft wrap**: long lines wrap at word boundaries, `↪` marks a wrapped line.
   It is display only; the file keeps one long line per paragraph.
-- **marksman** (LSP): `gd` on a link jumps to its target heading or file,
-  `<space>s` jumps to a heading, completion suggests headings and files in links.
-- **rumdl** (LSP): lint warnings as you type (`<space>d` picks one), and it
-  formats the file on save (`<space>=` to format now).
-- Snippets from `~/.config/nvim/snippets` work as in Fortran.
+- **Formatting**: `rumdl fmt` tidies the file on save (`<space>=` to format
+  now): heading spacing, blank lines around lists, trailing spaces.
+- With no language server there is no link jumping (`gd`), no lint warnings and
+  no snippets in Markdown; word completion still works.
 
 Useful keys while writing prose:
 
@@ -603,7 +607,7 @@ Then restart Kakoune (each session starts its own kak-lsp).
 - **No gfortran errors (efm) after saving**: kak-lsp is unpatched; see
   [Patched tools](#kak-lsp). efm only runs on save, so errors appear after `:w`,
   not while typing
-- **No Fortran, TOML or Markdown highlighting**: restart the tree-sitter server, then
+- **No Fortran, TOML, Markdown, CMake or JSON highlighting**: restart the tree-sitter server, then
   restart Kakoune: `kill (cat $TMPDIR/kak-tree-sitter/pid)`
 - **No snippets**: start Kakoune from fish (it sets `SNIPPETS_PATH`), and check
   that `bin/scls-kak` exists; see [Patched tools](#scls)

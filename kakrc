@@ -173,6 +173,21 @@ hook global BufSetOption filetype=cmake %{
     set-option -add buffer lsp_servers %opt{lsp_scls}
 }
 
+# JSON (e.g. the snippet files): checks the syntax as you type, and formats
+# (provideFormatter), as Helix does with the same server.
+hook global BufSetOption filetype=json %{
+    set-option buffer lsp_servers %{
+        [vscode-json-language-server]
+        root_globs = ["package.json", ".git"]
+        args = ["--stdio"]
+        settings_section = "_"
+        [vscode-json-language-server.settings._]
+        provideFormatter = true
+        json.format.enable = true
+        json.validate.enable = true
+    }
+}
+
 hook global BufSetOption filetype=toml %{
     set-option buffer lsp_servers %{
         [taplo]
@@ -184,17 +199,7 @@ hook global BufSetOption filetype=toml %{
     }
 }
 
-hook global BufSetOption filetype=markdown %{
-    set-option buffer lsp_servers %{
-        [marksman]
-        root_globs = [".marksman.toml", ".git"]
-        args = ["server"]
-        [rumdl]
-        root_globs = [".rumdl.toml", "pyproject.toml", ".git"]
-        args = ["server"]
-    }
-    set-option -add buffer lsp_servers %opt{lsp_scls}
-}
+# Markdown: no language server (formatting is rumdl's command line, below).
 
 hook global BufSetOption filetype=latex %{
     set-option buffer lsp_servers %{
@@ -223,7 +228,7 @@ hook global BufSetOption filetype=bibtex %{
     set-option -add buffer lsp_servers %opt{lsp_scls}
 }
 
-hook global WinSetOption filetype=(fortran|cmake|toml|markdown|latex|bibtex) %{
+hook global WinSetOption filetype=(fortran|cmake|toml|latex|bibtex|json) %{
     lsp-enable-window
     # no breadcrumbs (Helix has none): saves a documentSymbol request per idle
     remove-hooks window lsp-breadcrumbs
@@ -371,12 +376,15 @@ hook global WinSetOption filetype=fortran %{
 hook global WinSetOption filetype=cmake %{
     set-option window formatcmd 'gersemi --quiet -'
 }
+hook global WinSetOption filetype=markdown %{
+    set-option window formatcmd 'rumdl fmt --silent -'
+}
 hook global WinSetOption filetype=bibtex %{
     set-option window formatcmd 'bibtex-tidy - --curly --drop-all-caps --remove-empty-fields --sort-fields --sort=year,author,id --strip-enclosing-braces --trailing-commas'
 }
 hook global WinSetOption filetype=toml     %{ set-option window lsp_format_server taplo }
-hook global WinSetOption filetype=markdown %{ set-option window lsp_format_server rumdl }
 hook global WinSetOption filetype=latex    %{ set-option window lsp_format_server texlab }
+hook global WinSetOption filetype=json     %{ set-option window lsp_format_server vscode-json-language-server }
 
 define-command format-smart -docstring 'format the buffer (formatcmd or LSP)' %{
     evaluate-commands %sh{
@@ -390,7 +398,7 @@ define-command format-smart -docstring 'format the buffer (formatcmd or LSP)' %{
     }
 }
 
-hook global WinSetOption filetype=(fortran|cmake|bibtex|toml|markdown|latex) %{
+hook global WinSetOption filetype=(fortran|cmake|bibtex|toml|markdown|latex|json) %{
     hook -group format-on-save window BufWritePre .* %{
         try %{ format-smart } catch %{ echo -debug "format: %val{error}" }
     }
@@ -408,7 +416,9 @@ define-command -hidden -params 1.. picker-popup %{
     set-option global picker_last %arg{1}
     nop %sh{
         q=; [ "$kak_opt_picker_resuming" = true ] && q=$kak_opt_picker_query
+        # tmux's environment lacks EDITOR; yazi needs it (bulk rename, `edit`)
         tmux display-popup -E -w 90% -h 85% -d "$PWD" -e "KAK_PICKER_QUERY=$q" \
+            ${EDITOR:+-e "EDITOR=$EDITOR"} \
             "$kak_config/bin/kak-picker" "$kak_session" "$kak_client" "$@" \
             >/dev/null 2>&1 </dev/null &
     }
