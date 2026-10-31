@@ -25,7 +25,10 @@ evaluate-commands %sh{
         --with-highlighting --with-text-objects
 }
 
-colorscheme catppuccin-mocha
+# Themes in colors/: gruvbox (as Helix) or catppuccin-mocha. Switch for the
+# session with :colorscheme <name>, or change the line below to keep it.
+colorscheme gruvbox
+# colorscheme catppuccin-mocha
 
 # ─── editor ───────────────────────────────────────────────────────────────────
 set-option global ui_options terminal_assistant=none terminal_set_title=true \
@@ -424,9 +427,12 @@ define-command -hidden -params 1.. picker-popup %{
     set-option global picker_last %arg{1}
     nop %sh{
         q=; [ "$kak_opt_picker_resuming" = true ] && q=$kak_opt_picker_query
-        # tmux's environment lacks EDITOR; yazi needs it (bulk rename, `edit`)
+        # tmux's environment lacks EDITOR; yazi needs it (bulk rename, `edit`).
+        # FZF_DEFAULT_OPTS (fzf colours) comes from the shell that started
+        # Kakoune, not from tmux's copy, which can be stale.
         tmux display-popup -E -w 90% -h 85% -d "$PWD" -e "KAK_PICKER_QUERY=$q" \
             ${EDITOR:+-e "EDITOR=$EDITOR"} \
+            ${FZF_DEFAULT_OPTS:+-e "FZF_DEFAULT_OPTS=$FZF_DEFAULT_OPTS"} \
             "$kak_config/bin/kak-picker" "$kak_session" "$kak_client" "$@" \
             >/dev/null 2>&1 </dev/null &
     }
