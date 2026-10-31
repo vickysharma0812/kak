@@ -360,9 +360,8 @@ In insert mode the menu appears as you type:
   replaces the default, skipping keeps it
 
 Snippets are the shared VSCode-style ones in `~/.config/nvim/snippets`.
-Editing those `.json` files, you get JSON highlighting, an error mark as soon as
-the JSON is broken (a missing comma, an unclosed bracket), and formatting on save
-or `<space>=` (vscode-json-language-server, as in Helix). Restart Kakoune after
+Editing those `.json` files, you get JSON highlighting (tree-sitter; no JSON
+language server or formatter). Restart Kakoune after
 editing them so the snippet server reads them again.
 
 ## Writing Markdown
@@ -570,7 +569,7 @@ cargo install --locked --path . --force
 ```
 
 Then restart the tree-sitter server and Kakoune:
-`kill (cat $TMPDIR/kak-tree-sitter/pid)`.
+`kill (cat $TMPDIR/kak-tree-sitter/pid)` (on Linux: `$XDG_RUNTIME_DIR/kak-tree-sitter/pid`).
 
 ### kak-lsp
 
@@ -608,7 +607,7 @@ Then restart Kakoune (each session starts its own kak-lsp).
   [Patched tools](#kak-lsp). efm only runs on save, so errors appear after `:w`,
   not while typing
 - **No Fortran, TOML, Markdown, CMake or JSON highlighting**: restart the tree-sitter server, then
-  restart Kakoune: `kill (cat $TMPDIR/kak-tree-sitter/pid)`
+  restart Kakoune: `kill (cat $TMPDIR/kak-tree-sitter/pid)` (on Linux: `$XDG_RUNTIME_DIR/kak-tree-sitter/pid`)
 - **No snippets**: start Kakoune from fish (it sets `SNIPPETS_PATH`), and check
   that `bin/scls-kak` exists; see [Patched tools](#scls)
 - **Pickers do nothing**: Kakoune must run inside tmux

@@ -12,12 +12,12 @@ groups = ["function.call", "keyword.repeat", "keyword.modifier", "keyword.return
 
 # Fortran is not in the KTS defaults. Reuse the grammar and queries that Helix
 # already built from the tree-sitter-fortran fork, so both editors stay in sync.
-# After `hx --grammar build`, nothing needs to be done here.
+# After `helix --grammar build`, nothing needs to be done here.
 [grammar.fortran.source.local]
-path = "/Users/easifem/.config/helix/runtime/grammars/fortran.so"
+path = "/home/easifem/.config/helix/runtime/grammars/fortran.so"
 
 [language.fortran.queries.source.local]
-path = "/Users/easifem/.config/helix/runtime/queries/fortran"
+path = "/home/easifem/.config/helix/runtime/queries/fortran"
 
 [language.fortran]
 remove_default_highlighter = true
@@ -25,39 +25,39 @@ remove_default_highlighter = true
 # TOML: also reuse Helix's grammar and queries (KTS would otherwise need
 # `ktsctl sync toml`), so TOML looks the same in both editors.
 [grammar.toml.source.local]
-path = "/Users/easifem/.config/helix/runtime/grammars/toml.so"
+path = "/home/easifem/.config/helix/runtime/grammars/toml.so"
 
 [language.toml.queries.source.local]
-path = "/Users/easifem/.config/helix/runtime/queries/toml"
+path = "/home/easifem/.config/helix/runtime/queries/toml"
 
 # Markdown, as Helix does it: a block grammar (headings, lists, code blocks)
 # whose queries inject an inline grammar (bold, italic, code spans, links) into
 # each paragraph, and the fence's language into fenced code blocks.
 # The block grammar is the one Helix builds; the inline one is not built in
-# ~/.config/helix, so it comes from Homebrew's Helix runtime (as in Helix).
+# ~/.config/helix, so it comes from the system Helix runtime (/usr/lib/helix) (as in Helix).
 [grammar.markdown.source.local]
-path = "/Users/easifem/.config/helix/runtime/grammars/markdown.so"
+path = "/home/easifem/.config/helix/runtime/grammars/markdown.so"
 
 [language.markdown.queries.source.local]
-path = "/Users/easifem/.config/helix/runtime/queries/markdown"
+path = "/home/easifem/.config/helix/runtime/queries/markdown"
 
 [grammar."markdown.inline".source.local]
-path = "/opt/homebrew/opt/helix/libexec/runtime/grammars/markdown_inline.so"
+path = "/usr/lib/helix/runtime/grammars/markdown_inline.so"
 
 [language."markdown.inline".queries.source.local]
-path = "/opt/homebrew/opt/helix/libexec/runtime/queries/markdown.inline"
+path = "/usr/lib/helix/runtime/queries/markdown.inline"
 
 # JSON (snippet files): ~/.config/helix/runtime has no JSON grammar, so use
-# Homebrew's Helix runtime, as Helix itself does.
+# the system Helix runtime (/usr/lib/helix), as Helix itself does.
 [grammar.json.source.local]
-path = "/opt/homebrew/opt/helix/libexec/runtime/grammars/json.so"
+path = "/usr/lib/helix/runtime/grammars/json.so"
 
 [language.json.queries.source.local]
-path = "/opt/homebrew/opt/helix/libexec/runtime/queries/json"
+path = "/usr/lib/helix/runtime/queries/json"
 
 # CMake: Helix's grammar and queries, as for TOML.
 [grammar.cmake.source.local]
-path = "/Users/easifem/.config/helix/runtime/grammars/cmake.so"
+path = "/home/easifem/.config/helix/runtime/grammars/cmake.so"
 
 [language.cmake.queries.source.local]
-path = "/Users/easifem/.config/helix/runtime/queries/cmake"
+path = "/home/easifem/.config/helix/runtime/queries/cmake"

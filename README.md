@@ -25,7 +25,6 @@ formatters, tree-sitter grammar, theme and space-leader keys.
   | Markdown | none | rumdl (`rumdl fmt`) |
   | LaTeX | texlab, digestif, scls | texlab (latexindent) |
   | BibTeX | texlab, scls | bibtex-tidy |
-  | JSON (e.g. snippet files) | vscode-json-language-server | vscode-json-language-server |
 
 - **Snippets**: VSCode-style snippets from `$SNIPPETS_PATH`, shared with Helix and
   Neovim, served by a patched simple-completion-language-server (see below).
@@ -68,7 +67,7 @@ the picked item, and `<tab>` with no menu open jumps to the next snippet placeho
 
 ## Requirements
 
-macOS with Homebrew, run inside **tmux** (the pickers are tmux popups) and started
+macOS with Homebrew or Arch Linux (Wayland: `wl-clipboard`, `notify-send`), run inside **tmux** (the pickers are tmux popups) and started
 from **fish** (which sets `SNIPPETS_PATH`).
 
 - Kakoune, plus `cargo install kak-lsp kak-tree-sitter ktsctl`
@@ -76,7 +75,8 @@ from **fish** (which sets `SNIPPETS_PATH`).
 - `fd`, `ripgrep`, `fzf`, `bat`, `yazi`, `broot`, `lazygit`, `diffnav`, `perl`
 - Helix with its grammars built (`hx --grammar build`): kak-tree-sitter reads the
   Fortran, TOML, Markdown and CMake grammars and queries in `~/.config/helix/runtime`, and
-  Markdown's inline grammar and the JSON grammar from Homebrew's Helix (`/opt/homebrew/opt/helix`).
+  Markdown's inline grammar and the JSON grammar from the system Helix runtime
+  (`/usr/lib/helix/runtime` on Arch, `/opt/homebrew/opt/helix/libexec/runtime` with Homebrew).
 
 ## Install
 
@@ -85,8 +85,11 @@ git clone git@github.com:vickysharma0812/kak.git ~/.config/kak
 ~/.config/kak/bin/build-scls-kak   # builds bin/scls-kak (needs git and cargo)
 ```
 
-`autoload/standard-library` links to Homebrew's `/opt/homebrew/share/kak/autoload`;
-adjust it if Kakoune is installed elsewhere.
+`autoload/standard-library` links to Kakoune's system autoload directory:
+`/usr/share/kak/autoload` on Arch (this branch), `/opt/homebrew/share/kak/autoload`
+with Homebrew. Without it the user `autoload/` hides the standard library and
+kakrc stops early. On Arch, `~/.cargo/bin` is put first when starting
+kak-tree-sitter, so the patched build wins over the pacman package.
 
 ## Layout
 

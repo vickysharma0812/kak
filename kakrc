@@ -17,7 +17,9 @@
 
 # ─── tree-sitter ──────────────────────────────────────────────────────────────
 # Must come before the colorscheme: KTS resets the ts_* faces when it starts.
+# Prefer the patched copy in ~/.cargo/bin over a distro package earlier in PATH.
 evaluate-commands %sh{
+    PATH="$HOME/.cargo/bin:$PATH"
     kak-tree-sitter -dks --init "$kak_session" \
         --config "$kak_config/kak-tree-sitter.toml" \
         --with-highlighting --with-text-objects
@@ -77,13 +79,24 @@ hook global InsertChar \t %{ execute-keys -draft h@ }
 # trim trailing whitespace on save
 hook global BufWritePre .* %{ try %{ execute-keys -draft '%s\h+$<ret>d' } }
 
-# ─── clipboard (macOS) ────────────────────────────────────────────────────────
-# pbcopy runs in the background so yanks and deletes never wait on it
+# ─── clipboard ────────────────────────────────────────────────────────────────
+# pbcopy/pbpaste on macOS, wl-copy/wl-paste on Wayland, xclip on X11.
+declare-option -hidden str clip_copy %sh{
+    if command -v pbcopy >/dev/null; then echo pbcopy
+    elif [ -n "$WAYLAND_DISPLAY" ] && command -v wl-copy >/dev/null; then echo wl-copy
+    else echo 'xclip -selection clipboard'; fi
+}
+declare-option -hidden str clip_paste %sh{
+    if command -v pbpaste >/dev/null; then echo pbpaste
+    elif [ -n "$WAYLAND_DISPLAY" ] && command -v wl-paste >/dev/null; then echo 'wl-paste --no-newline'
+    else echo 'xclip -selection clipboard -o'; fi
+}
+# the copy runs in the background so yanks and deletes never wait on it
 hook global RegisterModified '"' %{ nop %sh{
-    { printf %s "$kak_main_reg_dquote" | pbcopy; } >/dev/null 2>&1 </dev/null &
+    { printf %s "$kak_main_reg_dquote" | $kak_opt_clip_copy; } >/dev/null 2>&1 </dev/null &
 } }
-map global user p '!pbpaste<ret>'     -docstring 'paste after from clipboard'
-map global user P '<a-!>pbpaste<ret>' -docstring 'paste before from clipboard'
+map global user p '!$kak_opt_clip_paste<ret>'     -docstring 'paste after from clipboard'
+map global user P '<a-!>$kak_opt_clip_paste<ret>' -docstring 'paste before from clipboard'
 
 # ─── LSP ──────────────────────────────────────────────────────────────────────
 # Same servers as ~/.config/helix/languages.toml.
@@ -112,7 +125,7 @@ hook global BufCreate .*\.bib %{
 # Helix keeps using the stock binary.
 declare-option -hidden str lsp_scls %{
     [scls]
-    command = "/Users/easifem/.config/kak/bin/scls-kak"
+    command = "/home/easifem/.config/kak/bin/scls-kak"
     root_globs = [".git"]
     settings_section = "_"
     [scls.settings._]
@@ -142,26 +155,37 @@ hook global BufSetOption filetype=fortran %{
             "--incremental_sync",
             "--recursion_limit", "1000",
             "--source_dirs",
-            "/Users/easifem/Dropbox/easifem/base/src/**",
-            "/Users/easifem/Dropbox/easifem/classes/src/**",
-            "/Users/easifem/Dropbox/easifem/seepage/src/**",
-            "/Users/easifem/Dropbox/easifem/oneDimElasticity/src/**",
-            "/Users/easifem/Dropbox/easifem/elasticity/src/**",
-            "/Users/easifem/Dropbox/easifem/sdof/src/**",
-            "/Users/easifem/.easifem/easifem/src/tomlf/src/**",
+            "/home/easifem/Dropbox/easifem/base/src/**",
+            "/home/easifem/Dropbox/easifem/classes/src/**",
+            "/home/easifem/Dropbox/easifem/seepage/src/**",
+            "/home/easifem/Dropbox/easifem/oneDimElasticity/src/**",
+            "/home/easifem/Dropbox/easifem/elasticity/src/**",
+            "/home/easifem/Dropbox/easifem/sdof/src/**",
+            "/home/easifem/.easifem/easifem/src/tomlf/src/**",
         ]
-
-        # Lint rules come from the project's config file (fortitude.toml,
-        # .fortitude.toml, [extra.fortitude] in fpm.toml, or pyproject.toml);
-        # projects without one get fortitude's defaults.
-        [fortitude]
-        root_globs = ["fortitude.toml", ".fortitude.toml", "fpm.toml", ".git", "CMakeLists.txt"]
-        args = ["server"]
-        settings_section = "_"
-        [fortitude.settings._.settings]
-        configurationPreference = "filesystemFirst"
+    }
+    evaluate-commands %sh{
+        [ "$kak_opt_fortitude_server" = true ] && echo 'set-option -add buffer lsp_servers %opt{lsp_fortitude}'
     }
     set-option -add buffer lsp_servers %opt{lsp_scls}
+}
+
+# Lint rules come from the project's config file (fortitude.toml,
+# .fortitude.toml, [extra.fortitude] in fpm.toml, or pyproject.toml);
+# projects without one get fortitude's defaults.
+declare-option -hidden str lsp_fortitude %{
+    [fortitude]
+    root_globs = ["fortitude.toml", ".fortitude.toml", "fpm.toml", ".git", "CMakeLists.txt"]
+    args = ["server"]
+    settings_section = "_"
+    [fortitude.settings._.settings]
+    configurationPreference = "filesystemFirst"
+}
+# Only use fortitude if it has a language server (`fortitude server`, newer
+# releases). An old fortitude exits at once, and that takes kak-lsp down with
+# it: no completion, snippets or diagnostics from any server.
+declare-option -hidden bool fortitude_server %sh{
+    if fortitude server --help >/dev/null 2>&1; then echo true; else echo false; fi
 }
 
 hook global BufSetOption filetype=cmake %{
@@ -171,21 +195,6 @@ hook global BufSetOption filetype=cmake %{
         args = ["stdio"]
     }
     set-option -add buffer lsp_servers %opt{lsp_scls}
-}
-
-# JSON (e.g. the snippet files): checks the syntax as you type, and formats
-# (provideFormatter), as Helix does with the same server.
-hook global BufSetOption filetype=json %{
-    set-option buffer lsp_servers %{
-        [vscode-json-language-server]
-        root_globs = ["package.json", ".git"]
-        args = ["--stdio"]
-        settings_section = "_"
-        [vscode-json-language-server.settings._]
-        provideFormatter = true
-        json.format.enable = true
-        json.validate.enable = true
-    }
 }
 
 hook global BufSetOption filetype=toml %{
@@ -228,7 +237,7 @@ hook global BufSetOption filetype=bibtex %{
     set-option -add buffer lsp_servers %opt{lsp_scls}
 }
 
-hook global WinSetOption filetype=(fortran|cmake|toml|latex|bibtex|json) %{
+hook global WinSetOption filetype=(fortran|cmake|toml|latex|bibtex) %{
     lsp-enable-window
     # no breadcrumbs (Helix has none): saves a documentSymbol request per idle
     remove-hooks window lsp-breadcrumbs
@@ -371,7 +380,7 @@ map global insert <tab> '<a-;>:snippet-next<ret>' \
 declare-option str lsp_format_server ''
 
 hook global WinSetOption filetype=fortran %{
-    set-option window formatcmd 'fprettier --config=/Users/easifem/.config/fprettier/fprettier.toml'
+    set-option window formatcmd 'fprettier --config=/home/easifem/.config/fprettier/fprettier.toml'
 }
 hook global WinSetOption filetype=cmake %{
     set-option window formatcmd 'gersemi --quiet -'
@@ -384,7 +393,6 @@ hook global WinSetOption filetype=bibtex %{
 }
 hook global WinSetOption filetype=toml     %{ set-option window lsp_format_server taplo }
 hook global WinSetOption filetype=latex    %{ set-option window lsp_format_server texlab }
-hook global WinSetOption filetype=json     %{ set-option window lsp_format_server vscode-json-language-server }
 
 define-command format-smart -docstring 'format the buffer (formatcmd or LSP)' %{
     evaluate-commands %sh{
@@ -398,7 +406,7 @@ define-command format-smart -docstring 'format the buffer (formatcmd or LSP)' %{
     }
 }
 
-hook global WinSetOption filetype=(fortran|cmake|bibtex|toml|markdown|latex|json) %{
+hook global WinSetOption filetype=(fortran|cmake|bibtex|toml|markdown|latex) %{
     hook -group format-on-save window BufWritePre .* %{
         try %{ format-smart } catch %{ echo -debug "format: %val{error}" }
     }

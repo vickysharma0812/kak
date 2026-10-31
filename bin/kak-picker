@@ -77,12 +77,12 @@ yazi)
     # (SIGKILL: on SIGTERM yazi empties the chooser file and does not exit.)
     (
         i=0   # wait for yazi to start
-        until pgrep -qf -- "--chooser-file=$chosen"; do
+        until pgrep -f -- "--chooser-file=$chosen" >/dev/null; do
             i=$((i + 1)); [ $i -gt 50 ] && exit 0
             sleep 0.1
         done
         while [ ! -s "$chosen" ]; do
-            pgrep -qf -- "--chooser-file=$chosen" || exit 0
+            pgrep -f -- "--chooser-file=$chosen" >/dev/null || exit 0
             sleep 0.1
         done
         sleep 0.1

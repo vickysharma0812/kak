@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Build and install an easifem package in the background, then report to
-# Kakoune (and as a macOS notification).
+# Kakoune (and as a desktop notification).
 # usage: easifem-build <session> <client> <base|classes>
 # The full output goes to ~/.cache/easifem/easifem-build-<pkg>-log.txt.
 
@@ -13,7 +13,13 @@ mkdir -p "$logdir"
 # Quote a string for Kakoune ('...' with doubled single quotes).
 kq() { local q="'"; printf "'%s'" "${1//$q/$q$q}"; }
 send() { printf 'evaluate-commands -try-client %s -- %s\n' "$client" "$(kq "$1")" | kak -p "$session"; }
-notify() { osascript -e "display notification \"$1\" with title \"easifem\"" >/dev/null 2>&1; }
+notify() {
+    if command -v osascript >/dev/null; then
+        osascript -e "display notification \"$1\" with title \"easifem\"" >/dev/null 2>&1
+    else
+        notify-send easifem "$1" >/dev/null 2>&1
+    fi
+}
 
 if [ -f "$pidfile" ] && kill -0 "$(cat "$pidfile")" 2>/dev/null; then
     send "echo -markup {Error}easifem: $pkg is already building"
