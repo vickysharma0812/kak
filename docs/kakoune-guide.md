@@ -87,7 +87,8 @@ Most keys are the same (`w` `b` `e` `f` `t` `x` `%` `s` `S` `C` `,` `;` `&` `|`
 | `<a-;>` | (in insert mode) run one normal-mode command, then return |
 | `:` | command prompt (`:w`, `:q`, `:e file`, ...) |
 
-The cursor is **green in insert mode** (rosewater in normal mode), as in Helix.
+The cursor **changes colour in insert mode** (gruvbox: beige → blue; catppuccin:
+rosewater → green), as in Helix.
 Kakoune can't change the terminal cursor's shape, so the colour does that job.
 Faint `│` indent guides mark each indent level, like Helix's indent guides.
 

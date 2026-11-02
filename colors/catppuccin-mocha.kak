@@ -148,5 +148,14 @@ evaluate-commands %sh{
     set-face global ts_markup_link_label         ${sapphire}
     set-face global ts_markup_raw                ${green}
     set-face global ts_markup_quote              ${pink}
+
+    # faces only gruvbox.kak sets, back to kak-tree-sitter's defaults (their
+    # parent), so switching with :colorscheme leaves none of its colours
+    set-face global ts_constant_macro            ts_constant
+    set-face global ts_function_builtin          ts_function
+    set-face global ts_keyword_control_import    ts_keyword_control
+    set-face global ts_markup_heading            ts_markup
+    set-face global ts_markup_strikethrough      ts_markup
+    set-face global ts_module                    default
 EOF
 }

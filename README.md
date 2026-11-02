@@ -37,7 +37,8 @@ formatters, tree-sitter grammar, theme and space-leader keys.
 - **Helix-like completion**: `<tab>`/`<s-tab>` or `<down>`/`<up>` move through the menu, `<ret>` accepts.
 - **Git signs**: added / changed / deleted line marks (like gitsigns), hunk jumps,
   stage / revert selected lines and blame, using Kakoune's built-in `git` command.
-- Catppuccin Mocha theme matching Helix's, drawn on the terminal's own background
+- Gruvbox dark theme, matching Ghostty, tmux and fzf (Catppuccin Mocha kept as an
+  alternative: `:colorscheme catppuccin-mocha`), drawn on the terminal's own background
   so Ghostty's `background-opacity` shows through, and a Helix-style modeline
   with the git branch.
 
@@ -95,7 +96,8 @@ adjust it if Kakoune is installed elsewhere.
 | `kakrc` | main config |
 | `kak-tree-sitter.toml` | kak-tree-sitter config (Fortran, TOML, Markdown, CMake and JSON grammars from Helix) |
 | `autoload/fortran.kak` | Fortran filetype and indentation |
-| `colors/catppuccin-mocha.kak` | theme, including tree-sitter faces |
+| `colors/gruvbox.kak` | default theme, including tree-sitter faces |
+| `colors/catppuccin-mocha.kak` | alternative theme, same faces |
 | `bin/easifem-build` | background easifem build with log and notifications |
 | `bin/split-use-filter` | runs easifem's `split-use-only.fish` on piped text, for `:split-use` |
 | `bin/easifem-errors` | picks the gfortran errors out of a build log for `<space>+ e` |

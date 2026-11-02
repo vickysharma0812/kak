@@ -13,7 +13,14 @@ mkdir -p "$logdir"
 # Quote a string for Kakoune ('...' with doubled single quotes).
 kq() { local q="'"; printf "'%s'" "${1//$q/$q$q}"; }
 send() { printf 'evaluate-commands -try-client %s -- %s\n' "$client" "$(kq "$1")" | kak -p "$session"; }
-notify() { osascript -e "display notification \"$1\" with title \"easifem\"" >/dev/null 2>&1; }
+# notify() { osascript -e "display notification \"$1\" with title \"easifem\"" >/dev/null 2>&1; }
+notify() {
+    if command -v osascript >/dev/null; then
+        osascript -e "display notification \"$1\" with title \"easifem\"" >/dev/null 2>&1
+    else
+        notify-send easifem "$1" >/dev/null 2>&1
+    fi
+}
 
 if [ -f "$pidfile" ] && kill -0 "$(cat "$pidfile")" 2>/dev/null; then
     send "echo -markup {Error}easifem: $pkg is already building"
@@ -24,8 +31,8 @@ trap 'rm -f "$pidfile"' EXIT
 
 start=$(date +%s)
 {
-    echo "# easifem dev $pkg && easifem install $pkg   ($(date '+%Y-%m-%d %H:%M:%S'))"
-    easifem dev "$pkg" -q && easifem install "$pkg" --no-download -q
+    echo "# easifem dev $pkg && easifem install $pkg  ($(date '+%Y-%m-%d %H:%M:%S'))"
+    easifem dev "$pkg" --verbose && easifem install "$pkg" --no-download --verbose
 } >"$log" 2>&1
 status=$?
 secs=$(($(date +%s) - start))
