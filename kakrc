@@ -50,6 +50,40 @@ map global normal ?     '?(?i)'
 map global normal <a-/> '<a-/>(?i)'
 map global normal <a-?> '<a-?>(?i)'
 
+# n / N / <a-n> / <a-N> stop at the end (or start) of the buffer instead of
+# wrapping around, like Vim's `nowrapscan`. Each jump of a count (3n) is first
+# tried in a draft; if one wraps, the selections stay put and it says so.
+declare-option -hidden str search_before
+define-command -hidden search-nowrap -params 2 %{
+    evaluate-commands -draft %sh{
+        n=$2; [ "$n" -gt 0 ] || n=1
+        while [ $n -gt 0 ]; do printf "search-nowrap-step '%s'\n" "$1"; n=$((n - 1)); done
+    }
+    execute-keys %sh{ [ "$2" -gt 0 ] && printf %s "$2"; printf %s "$1" }
+}
+# One jump; fails if the new main selection is not past the old one.
+define-command -hidden search-nowrap-step -params 1 %{
+    set-option window search_before %val{selection_desc}
+    execute-keys %arg{1}
+    evaluate-commands %sh{
+        pos() { echo $(( ${1%.*} * 1000000 + ${1#*.} )); }   # line.col -> number
+        span() {   # selection desc -> "start end"
+            a=$(pos "${1%,*}") b=$(pos "${1#*,}")
+            if [ $a -le $b ]; then echo "$a $b"; else echo "$b $a"; fi
+        }
+        set -- "$1" $(span "$kak_opt_search_before") $(span "$kak_selection_desc")
+        old_cur=$(pos "${kak_opt_search_before#*,}")
+        case $1 in
+            '<a-n>'|'<a-N>') [ "$5" -ge "$2" ] && echo "fail 'search hit TOP: no earlier match'" ;;
+            *)               [ "$4" -le "$old_cur" ] && echo "fail 'search hit BOTTOM: no later match'" ;;
+        esac
+    }
+}
+map global normal n     ': search-nowrap n %val{count}<ret>'     -docstring 'next match (no wrap)'
+map global normal N     ': search-nowrap N %val{count}<ret>'     -docstring 'add next match (no wrap)'
+map global normal <a-n> ': search-nowrap <lt>a-n<gt> %val{count}<ret>' -docstring 'previous match (no wrap)'
+map global normal <a-N> ': search-nowrap <lt>a-N<gt> %val{count}<ret>' -docstring 'add previous match (no wrap)'
+
 # Helix's x: select the line; pressed again on whole lines, add the next line.
 # A count selects that many lines (3x). X is Kakoune's x (to line bounds only).
 map global normal x ': helix-x %val{count}<ret>' -docstring 'select line, then add the next'
@@ -982,9 +1016,20 @@ define-command -hidden modeline-update-branch %{
 hook global WinDisplay .* git-refresh
 hook global FocusIn    .* git-refresh
 
+# Position in the file as a percentage (cursor line / line count), like Helix's
+# position-percentage. Modelinefmt can't do arithmetic, so it is worked out
+# when the cursor stops moving.
+declare-option -hidden str modeline_percent '0%'
+define-command -hidden modeline-update-percent %{
+    set-option window modeline_percent %sh{ echo "$((kak_cursor_line * 100 / kak_buf_line_count))%" }
+}
+hook global NormalIdle .* modeline-update-percent
+hook global InsertIdle .* modeline-update-percent
+hook global WinDisplay .* modeline-update-percent
+
 set-option global modelinefmt '{ModelineMode} %opt{modeline_mode} {StatusLine} {StatusLineInfo}%opt{modeline_bufname}{StatusLine} {ModelineBranch}%opt{modeline_branch}{StatusLine}{{context_info}} {{mode_info}} '
 set-option -add global modelinefmt %opt{lsp_modeline}
-set-option -add global modelinefmt ' {ModelineError}● %opt{lsp_diagnostic_error_count} {ModelineWarning}▲ %opt{lsp_diagnostic_warning_count}{StatusLine}  {StatusLineValue}%val{cursor_line}:%val{cursor_char_column}{StatusLine}  {ModelineDim}%opt{filetype} '
+set-option -add global modelinefmt ' {ModelineError}● %opt{lsp_diagnostic_error_count} {ModelineWarning}▲ %opt{lsp_diagnostic_warning_count}{StatusLine}  {StatusLineValue}%val{cursor_line}:%opt{modeline_percent}{StatusLine}  {ModelineDim}%opt{filetype} '
 
 # ─── git signs (like gitsigns / Helix's diff gutter) ──────────────────────────
 # Kakoune's stdlib `git` command does the work: show-diff marks added (green),
