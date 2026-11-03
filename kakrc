@@ -420,6 +420,8 @@ map global user = ':format-smart<ret>' -docstring 'format buffer'
 # ─── picker (fzf in a tmux popup) ─────────────────────────────────────────────
 # bin/kak-picker runs the picker and sends the choice back. The fzf pickers
 # also send back their query, so <space>' reopens the last picker with it.
+# Picker UI: tv (television, uses its own config and theme) or fzf.
+declare-option -docstring 'picker UI: tv or fzf' str picker_tool tv
 declare-option -hidden str picker_last
 declare-option -hidden str picker_query
 declare-option -hidden bool picker_resuming false
@@ -431,6 +433,7 @@ define-command -hidden -params 1.. picker-popup %{
         # FZF_DEFAULT_OPTS (fzf colours) comes from the shell that started
         # Kakoune, not from tmux's copy, which can be stale.
         tmux display-popup -E -w 90% -h 85% -d "$PWD" -e "KAK_PICKER_QUERY=$q" \
+            -e "KAK_PICKER_TOOL=$kak_opt_picker_tool" \
             ${EDITOR:+-e "EDITOR=$EDITOR"} \
             ${FZF_DEFAULT_OPTS:+-e "FZF_DEFAULT_OPTS=$FZF_DEFAULT_OPTS"} \
             "$kak_config/bin/kak-picker" "$kak_session" "$kak_client" "$@" \
@@ -571,6 +574,31 @@ map global user t ':enter-user-mode tree-sitter<ret>' -docstring 'tree-sitter'
 # expand / shrink selection to parent / child node (Helix's <a-o>/<a-i>)
 map global normal <a-up>   ":tree-sitter-nav '""parent""'<ret>"
 map global normal <a-down> ":tree-sitter-nav '""first_child""'<ret>"
+
+# Fortran constructs as text objects (<a-i>/<a-a>, mi/ma). The Helix queries
+# reuse Helix's fixed capture names: do loops are "entry", if / select case /
+# select type are "comment", block ... end block is "test" (KTS's T).
+#   l  do loop     I  if / select     B  block (= T; Fortran has no braces)
+# <space>t / l, <space>t <a-/> l (and I) jump to the next / previous one.
+hook global WinSetOption filetype=fortran %{
+    map window object l '<a-;>tree-sitter-object-text-objects entry<ret>'   -docstring 'do loop (tree-sitter)'
+    map window object I '<a-;>tree-sitter-object-text-objects comment<ret>' -docstring 'if / select (tree-sitter)'
+    map window object B '<a-;>tree-sitter-object-text-objects test<ret>'    -docstring 'block (tree-sitter)'
+    map window tree-sitter-search     l ':tree-sitter-text-objects entry.around search_next<ret>'   -docstring 'do loop'
+    map window tree-sitter-search-rev l ':tree-sitter-text-objects entry.around search_prev<ret>'   -docstring 'do loop'
+    map window tree-sitter-search     I ':tree-sitter-text-objects comment.around search_next<ret>' -docstring 'if / select'
+    map window tree-sitter-search-rev I ':tree-sitter-text-objects comment.around search_prev<ret>' -docstring 'if / select'
+    # (not filetype=.*: that also matches this fortran and unmaps at once)
+    hook -once -always window WinSetOption filetype=(?!fortran$).* %{
+        unmap window object l
+        unmap window object I
+        unmap window object B
+        unmap window tree-sitter-search l
+        unmap window tree-sitter-search-rev l
+        unmap window tree-sitter-search I
+        unmap window tree-sitter-search-rev I
+    }
+}
 
 # ─── remember the cursor position ─────────────────────────────────────────────
 # Reopening a file puts the cursor where it was. Positions are kept in

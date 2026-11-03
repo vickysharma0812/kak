@@ -177,12 +177,23 @@ In this config, `s`, `S`, `<a-k>`, `<a-K>` and the search prompts start with
 
 These use tree-sitter (via a patched kak-tree-sitter, see the README).
 
-### Selecting a whole block (e.g. a `do` loop)
+### Selecting a `do` loop, `if` or `block`
 
-The custom object `c` takes an opening and a closing regex, separated by a comma,
-and selects the block around the cursor. It understands nesting.
+In Fortran files these are tree-sitter objects too:
 
-Select the whole `do ... end do` loop:
+| Key | Action |
+|---|---|
+| `<a-a>l` / `<a-i>l` | whole `do ... end do` loop / its body |
+| `<a-a>I` / `<a-i>I` | whole `if`, `select case` or `select type` / its body |
+| `<a-a>B` / `<a-i>B` | whole `block ... end block` / its body (`T` does the same) |
+| `<space>t` then `/l` / `<a-/>l` | jump to the next / previous loop (`I` for ifs) |
+
+`m a` / `m i` work as well (`m a l`). They work from anywhere in the
+construct, including the indentation; nested loops select the innermost one.
+
+For other blocks, the custom object `c` takes an opening and a closing regex,
+separated by a comma, and selects the block around the cursor. It understands
+nesting. The same `do ... end do` loop with it:
 
 ```text
 <a-a>c(?i)^\h*(?:\w+\h*:\h*)?do\b,(?i)^\h*end\h*do\b<ret>
@@ -431,10 +442,12 @@ until you `git add` them. In diffnav, `e` toggles the file tree and `/` searches
 | `:easifem-build-log base` / `classes` | open that package's log (`:easifem-build-errors` takes the same) |
 | `<space>g` | lazygit |
 
-Builds run `easifem dev <pkg> -q && easifem install <pkg> --no-download -q` with
-no popup, so you keep editing. When the build ends:
+Builds run `easifem dev <pkg> --verbose && easifem install <pkg> --no-download --verbose`
+with no popup, so you keep editing. `--verbose` puts the full compiler output in
+the log; without it the CLI keeps that in its own log files under `/tmp`, and
+the error list stays empty. When the build ends:
 
-- **success**: an info box and a macOS notification ("base: built and installed (2m 13s)")
+- **success**: an info box and a desktop notification ("base: built and installed (2m 13s)")
 - **failure**: an info box with the first compiler errors (or the end of the
   log) and a notification; `<space>+` `e` lists every error, `<space>+` `l`
   opens the full log
@@ -538,7 +551,7 @@ uses none of these binaries, so rebuilding them never affects Helix.
 | Tool | Patch | What it fixes | Symptom without it |
 |---|---|---|---|
 | scls (`bin/scls-kak`) | `scls-full-sync.patch` | scls ignored the full-document changes kak-lsp sends | no snippets in the completion menu |
-| kak-tree-sitter 3.2.2 | `kak-tree-sitter-text-objects.patch` | nodes ending at a line start; `(_)+` captures kept only the first node | `<a-i>f` / `<a-a>f` / `<a-i>t` do nothing or select one line |
+| kak-tree-sitter 3.2.2 | `kak-tree-sitter-text-objects.patch` | nodes ending at a line start; `(_)+` captures kept only the first node; a cursor on an object's first character or in its indentation was not "inside" it | `<a-i>f` / `<a-a>f` / `<a-i>t` / `<a-i>l` do nothing or select one line |
 | kak-lsp 22.0.0 | `kak-lsp-did-save.patch` | `didSave` was not sent to efm-langserver | no gfortran (efm) errors after `:w` |
 
 Redo the matching step after **any** reinstall or upgrade of that tool (for

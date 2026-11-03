@@ -5,6 +5,8 @@
 #   diagnostics <list> <project-root> <buffer> | palette <mappings> <tmux-pane>
 # The choice is sent back to the Kakoune client with `kak -p`. The fzf
 # pickers start from $KAK_PICKER_QUERY and send their query back as well.
+# KAK_PICKER_TOOL=tv uses television instead of fzf (kakrc's picker_tool).
+# tv cannot print its query, so <space>' reopens a tv picker without it.
 
 session=$1 client=$2 mode=$3 list=$4
 
@@ -25,6 +27,17 @@ pick() {
     send "set-option global picker_query $(kq "$q")"
     [ -n "$sel" ] && printf '%s\n' "$sel"
 }
+
+# television: tvpick <source-command> <preview-command|""> [tv options]
+# Prints the choice. Templates: {} is the entry, {split:\::1} its 2nd field.
+tvpick() {
+    local src=$1 prev=$2; shift 2
+    tv --source-command "$src" ${prev:+--preview-command "$prev"} \
+        --input "${KAK_PICKER_QUERY-}" "$@"
+}
+tv_preview="bat --color=always --style=numbers --line-range=:300 '{}'"
+tv_line_preview="bat --color=always --style=numbers --highlight-line '{split:\::1}' '{split:\::0}'"
+use_tv() { [ "${KAK_PICKER_TOOL-}" = tv ] && command -v tv >/dev/null; }
 
 # Kakoune key names (<space>hn) as tmux send-keys arguments, one per line.
 tmux_keys() {
@@ -47,12 +60,26 @@ tmux_keys() {
 
 case $mode in
 files)
-    sel=$(fd --type f --hidden --exclude .git --exclude build |
-        pick --prompt='files> ' --preview "$preview") || exit 0
+    fd_cmd='fd --type f --hidden --exclude .git --exclude build'
+    if use_tv; then
+        sel=$(tvpick "$fd_cmd" "$tv_preview" --input-header files)
+    else
+        sel=$($fd_cmd | pick --prompt='files> ' --preview "$preview")
+    fi
+    [ -n "$sel" ] || exit 0
     send "edit -existing $(kq "$sel")"
     ;;
 grep)
     # live grep: rg reruns on every keystroke, fzf only displays.
+    if use_tv; then
+        # tv filters all of rg's lines itself (no rerun per keystroke)
+        sel=$(tvpick 'rg --line-number --column --no-heading --color=never --smart-case .' \
+            "$tv_line_preview" --preview-offset '{split:\::1}' --input-header grep)
+        [ -n "$sel" ] || exit 0
+        IFS=: read -r file line col _ <<<"$sel"
+        send "edit -existing $(kq "$file") $line $col"
+        exit 0
+    fi
     rg_cmd='rg --line-number --column --no-heading --color=always --smart-case --'
     sel=$(: | pick --ansi --disabled --prompt='grep> ' \
         --bind "start:reload:$rg_cmd {q} || true" \
@@ -64,7 +91,11 @@ grep)
     send "edit -existing $(kq "$file") $line $col"
     ;;
 buffers)
-    sel=$(pick --prompt='buffers> ' --preview "$preview" <"$list")
+    if use_tv; then
+        sel=$(tvpick "cat $(printf %q "$list")" "$tv_preview" --no-sort --input-header buffers)
+    else
+        sel=$(pick --prompt='buffers> ' --preview "$preview" <"$list")
+    fi
     rm -f "$list"
     [ -n "$sel" ] && send "buffer $(kq "$sel")"
     ;;
@@ -90,7 +121,11 @@ yazi)
         pkill -KILL -f -- "--chooser-file=$chosen"
     ) &
     watcher=$!
-    yazi "$list" --chooser-file="$chosen"
+    # Hide tmux from yazi. Seeing $TMUX (and allow-passthrough on), yazi sends
+    # its terminal queries through to Ghostty, and the replies (^[[?62;4c,
+    # 11;rgb:...) then reach the pane under the popup: Kakoune reads them as
+    # typed keys. Without it tmux answers yazi itself, inside the popup.
+    env -u TMUX -u TERM_PROGRAM -u TERM_PROGRAM_VERSION yazi "$list" --chooser-file="$chosen"
     kill "$watcher" 2>/dev/null
     [ -s "$chosen.done" ] && mv "$chosen.done" "$chosen"
     # (yazi writes no trailing newline, hence the || [ -n "$f" ])
@@ -113,6 +148,9 @@ diagnostics)
     root=$5 back="buffer $(kq "$6")"
     if [ ! -s "$list" ]; then
         back="$back; echo 'no diagnostics'"
+    elif cd "$root" && use_tv; then
+        sel=$(tvpick "cat $(printf %q "$list")" "$tv_line_preview" \
+            --preview-offset '{split:\::1}' --no-sort --input-header diagnostics)
     elif cd "$root"; then
         sel=$(pick --prompt='diagnostics> ' --delimiter : \
             --preview 'bat --color=always --style=numbers --highlight-line {2} {1}' \
@@ -131,7 +169,8 @@ palette)
     # reach it (following modes entered from normal mode, <space>, g or v)
     # and types the chosen keys.
     pane=$5
-    sel=$(perl -ne '
+    menu=$(mktemp "${TMPDIR:-/tmp}/kak-palette.XXXXXX")
+    perl -ne '
         push @m, [$1, $2, $3, $4] if /^ \* (\S+) (\S+): \x27([^\x27]*)\x27 ?(.*)$/;
         END {
             my %pre = (normal => "", user => "<space>", goto => "g", view => "v");
@@ -150,7 +189,14 @@ palette)
                 my $keys = $pre{$mode} . $key;
                 printf "%-50s %-14s %s\t%s\n", $doc, $keys, $mode, $keys;
             }
-        }' "$list" | pick --prompt='keys> ' --delimiter '\t' --with-nth 1 --no-sort)
+        }' "$list" >"$menu"
+    if use_tv; then
+        sel=$(tvpick "cat $(printf %q "$menu")" "" --no-preview --no-sort --input-header keys \
+            --source-display '{split:\t:0}')
+    else
+        sel=$(pick --prompt='keys> ' --delimiter '\t' --with-nth 1 --no-sort <"$menu")
+    fi
+    rm -f "$menu"
     [ -n "$sel" ] || exit 0
     keys=()
     while IFS= read -r k; do keys+=("$k"); done < <(tmux_keys "${sel##*$'\t'}")

@@ -97,7 +97,7 @@ index df73b79..eb165ad 100644
      if self.anchor <= self.cursor {
        self.anchor == start && self.cursor == end
 diff --git a/src/tree_sitter/state.rs b/src/tree_sitter/state.rs
-index 271da4f..5750ac8 100644
+index 271da4f..21c6a7f 100644
 --- a/src/tree_sitter/state.rs
 +++ b/src/tree_sitter/state.rs
 @@ -13,7 +13,7 @@ use crate::{
@@ -206,7 +206,7 @@ index 271da4f..5750ac8 100644
    ) -> impl Iterator<Item = Sel> {
      nodes
        .filter(move |node| sel.selects(buf, node))
-@@ -409,7 +414,7 @@ impl TreeState {
+@@ -409,11 +414,14 @@ impl TreeState {
    fn tree_sitter_object_text_object<'node>(
      buf: RopeSlice,
      sel: &Sel,
@@ -215,7 +215,15 @@ index 271da4f..5750ac8 100644
      mode: SelectMode,
      flags: ObjectFlags,
    ) -> Option<Sel> {
-@@ -422,8 +427,7 @@ impl TreeState {
+-    let node = Self::tree_sitter_narrowest_enclosing_node(buf, &sel.cursor, nodes)?;
++    // A cursor in a line's indentation stands for the line's first non-blank
++    // character, so <a-i> on an indented body line finds the body.
++    let p = Self::skip_indentation(buf, &sel.cursor);
++    let node = Self::tree_sitter_narrowest_enclosing_node(buf, &p, nodes)?;
+ 
+     match mode {
+       // extend only moves the cursor
+@@ -422,8 +430,7 @@ impl TreeState {
          let cursor = if flags.to_begin {
            Pos::from_tree_sitter(buf, node.start_byte())
          } else if flags.to_end {
@@ -225,7 +233,7 @@ index 271da4f..5750ac8 100644
            p
          } else {
            return None;
-@@ -440,13 +444,11 @@ impl TreeState {
+@@ -440,13 +447,11 @@ impl TreeState {
            Some(Sel { anchor, cursor })
          } else if !flags.to_begin && flags.to_end {
            let anchor = sel.cursor;
@@ -241,7 +249,7 @@ index 271da4f..5750ac8 100644
            Some(Sel { anchor, cursor })
          } else {
            None
-@@ -459,8 +461,8 @@ impl TreeState {
+@@ -459,8 +464,8 @@ impl TreeState {
    fn tree_sitter_node_after<'a>(
      buf: RopeSlice,
      p: &Pos,
@@ -252,7 +260,7 @@ index 271da4f..5750ac8 100644
      let mut candidates = nodes
        .filter(|node| &Pos::from_tree_sitter(buf, node.start_byte()) > p)
        .collect::<Vec<_>>();
-@@ -473,8 +475,8 @@ impl TreeState {
+@@ -473,8 +478,8 @@ impl TreeState {
    fn tree_sitter_node_before<'a>(
      buf: RopeSlice,
      p: &Pos,
@@ -263,7 +271,27 @@ index 271da4f..5750ac8 100644
      let mut candidates = nodes
        .filter(|node| &Pos::from_tree_sitter(buf, node.start_byte()) < p)
        .collect::<Vec<_>>();
-@@ -487,8 +489,8 @@ impl TreeState {
+@@ -483,16 +488,34 @@ impl TreeState {
+     candidates.into_iter().next_back()
+   }
+ 
++  /// Move a position inside a line's leading whitespace to the line's first
++  /// non-blank character; other positions are returned unchanged.
++  fn skip_indentation(buf: RopeSlice, p: &Pos) -> Pos {
++    let Some(line) = buf.get_line(p.line.saturating_sub(1)) else {
++      return p.clone();
++    };
++    let indent = line.bytes().take_while(|b| *b == b' ' || *b == b'\t').count();
++    let rest = line.len_bytes() - indent;
++    let blank = line.bytes().skip(indent).all(|b| b == b'\n' || b == b'\r');
++    if p.col <= indent && rest > 0 && !blank {
++      Pos { line: p.line, col: indent + 1 }
++    } else {
++      p.clone()
++    }
++  }
++
+   /// Get the narrowest enclosing node of a given position.
    fn tree_sitter_narrowest_enclosing_node<'a>(
      buf: RopeSlice,
      p: &Pos,
@@ -272,5 +300,13 @@ index 271da4f..5750ac8 100644
 +    nodes: impl Iterator<Item = Span>,
 +  ) -> Option<Span> {
      let mut candidates = nodes
++      // Inclusive on both sides: a cursor on a node's first or last character
++      // is inside it (the end is converted from tree-sitter's exclusive end).
        .filter(|node| {
-         &Pos::from_tree_sitter(buf, node.start_byte()) < p
+-        &Pos::from_tree_sitter(buf, node.start_byte()) < p
+-          && &Pos::from_tree_sitter(buf, node.end_byte()) > p
++        &Pos::from_tree_sitter(buf, node.start_byte()) <= p
++          && &Pos::from_tree_sitter_end(buf, node.start_byte(), node.end_byte()) >= p
+       })
+       .collect::<Vec<_>>();
+ 

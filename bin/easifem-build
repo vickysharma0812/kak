@@ -10,6 +10,11 @@ log=$logdir/easifem-build-$pkg-log.txt
 pidfile=$logdir/easifem-build-$pkg.pid
 mkdir -p "$logdir"
 
+# Kakoune's working directory may have been deleted and recreated (a clean,
+# a checkout, Dropbox); the inherited one is then dead and easifem fails with
+# "getwd: no such file or directory". Re-enter it by name, or go home.
+cd -- "$PWD" 2>/dev/null || cd "$HOME"
+
 # Quote a string for Kakoune ('...' with doubled single quotes).
 kq() { local q="'"; printf "'%s'" "${1//$q/$q$q}"; }
 send() { printf 'evaluate-commands -try-client %s -- %s\n' "$client" "$(kq "$1")" | kak -p "$session"; }
@@ -31,7 +36,7 @@ trap 'rm -f "$pidfile"' EXIT
 start=$(date +%s)
 {
     echo "# easifem dev $pkg && easifem install $pkg   ($(date '+%Y-%m-%d %H:%M:%S'))"
-    easifem dev "$pkg" -q && easifem install "$pkg" --no-download -q
+    easifem dev "$pkg" --verbose && easifem install "$pkg" --no-download --verbose
 } >"$log" 2>&1
 status=$?
 secs=$(($(date +%s) - start))

@@ -14,6 +14,8 @@ formatters, tree-sitter grammar, theme and space-leader keys.
 - **Indent guides**, a **green cursor in insert mode** and `gw` jump labels, as in Helix.
 - **Cursor position remembered** per file between sessions.
 - **Fortran filetype** with auto-indent (Kakoune ships none): `autoload/fortran.kak`.
+- **Fortran text objects** from tree-sitter: procedures (`f`), modules and types
+  (`t`), do loops (`l`), if / select (`I`) and blocks (`B`), with `<a-i>` / `<a-a>`.
 - **LSP** via [kakoune-lsp](https://github.com/kakoune-lsp/kakoune-lsp), with the same
   servers as Helix:
 
@@ -28,9 +30,11 @@ formatters, tree-sitter grammar, theme and space-leader keys.
 
 - **Snippets**: VSCode-style snippets from `$SNIPPETS_PATH`, shared with Helix and
   Neovim, served by a patched simple-completion-language-server (see below).
-- **Pickers** in tmux popups: fzf for files, live grep, buffers, diagnostics and a
+- **Pickers** in tmux popups: [television](https://github.com/alexpasmantier/television)
+  (`tv`, the default) or fzf for files, grep, buffers, diagnostics and a
   command palette of every described key, plus yazi and broot; `<space>'`
-  reopens the last one with its query.
+  reopens the last one (with its query, for fzf). Pick the UI with
+  `set-option global picker_tool fzf` (or `tv`).
 - **Auto pairs** like Helix: brackets and quotes close themselves, the closing
   character is stepped over, and `<backspace>` deletes an empty pair.
 - **Helix-like completion**: `<tab>`/`<s-tab>` or `<down>`/`<up>` move through the menu, `<ret>` accepts.
@@ -105,7 +109,7 @@ kak-tree-sitter, so the patched build wins over the pacman package.
 | `bin/split-use-filter` | runs easifem's `split-use-only.fish` on piped text, for `:split-use` |
 | `bin/easifem-errors` | picks the gfortran errors out of a build log for `<space>+ e` |
 | `bin/kak-jump-labels` | labels for `gw` (jump to a word on screen) |
-| `bin/kak-picker` | fzf (files, grep, buffers, diagnostics, palette), yazi and broot pickers in tmux popups |
+| `bin/kak-picker` | tv or fzf (files, grep, buffers, diagnostics, palette), yazi and broot pickers in tmux popups |
 | `broot/kak.hjson` | broot verb for the picker: `<ret>` on a file opens it in Kakoune |
 | `bin/kak-snippet-flatten` | rewrites VSCode snippets into what kak-lsp can expand |
 | `bin/build-scls-kak` | builds the patched scls into `bin/scls-kak` (not tracked) |
@@ -123,11 +127,13 @@ Step-by-step rebuild instructions for the patched tools are in
   snippets in Kakoune. `bin/build-scls-kak` builds a Kakoune-only copy with the fix;
   Helix keeps using the stock binary. Reported upstream as
   [estin/simple-completion-language-server#238](https://github.com/estin/simple-completion-language-server/issues/238).
-- **Patched kak-tree-sitter.** Two text-object bugs in kak-tree-sitter 3.2.2 broke
-  `<a-i>f` / `<a-a>f` on Fortran procedures: a node ending at a line start became
-  an invalid `line.0` position, and a quantified capture such as
-  `(_)+ @function.inside` kept only its first node. `patches/kak-tree-sitter-text-objects.patch`
-  fixes both; apply it to the kak-tree-sitter source and `cargo install --path .`.
+- **Patched kak-tree-sitter.** Three text-object bugs in kak-tree-sitter 3.2.2 broke
+  `<a-i>f` / `<a-a>f` and the loop / if / block objects on Fortran: a node ending
+  at a line start became an invalid `line.0` position, a quantified capture such
+  as `(_)+ @function.inside` kept only its first node, and a cursor on an
+  object's first character (or in the indentation before it) did not count as
+  inside it. `patches/kak-tree-sitter-text-objects.patch` fixes all three; apply
+  it to the kak-tree-sitter source and `cargo install --path .`.
   Helix is unaffected (it does not use kak-tree-sitter).
 - **Patched kakoune-lsp.** kakoune-lsp 22.0.0 sends `didSave` only to servers whose
   `textDocumentSync` lists a save option, so efm-langserver (which reports a bare
