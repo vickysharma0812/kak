@@ -270,7 +270,7 @@ To turn it off until you restart Kakoune, run `:remove-hooks global auto-pairs`.
 | `n` / `<a-n>` | next / previous match |
 | `N` | **add** the next match as another selection |
 | `?` / `<a-?>` | extend the selection to the next / previous match |
-| `<space>/` | live grep over the project (fzf) |
+| `<space>/` | grep over the project |
 
 ## Recipes (for Fortran)
 
@@ -312,12 +312,18 @@ Registers worth knowing: `"` last yank/delete, `/` last search, `@` last macro,
 
 | Key | Action |
 |---|---|
-| `<space>f` | find a file (fzf) |
+| `<space>f` | find a file |
 | `<space>e` | yazi: pick a file, `<ret>` opens it in this session (bulk rename, `r` on selected files, edits the names in your `$EDITOR`) |
 | `<space>E` | broot: type to filter the tree, `<ret>` on a file opens it (on a folder, enters it); `<esc>` goes back / quits |
 | `<space>,` | pick an open buffer |
 | `<space>'` | reopen the last picker with the text you had typed (also after `<esc>`) |
-| `ctrl-t` (in a picker) | show / hide the preview, as in Helix |
+| `ctrl-t` (in a picker) | show / hide the preview, as in Helix (fzf; tv uses its own keys) |
+
+The pickers run in **television** (`tv`) by default, with its own config and
+gruvbox theme (`~/.config/television`). `:set-option global picker_tool fzf`
+switches to fzf for the session (put it in `kakrc` to keep it). Differences:
+fzf's grep reruns `rg` on each keystroke, tv filters all of rg's lines; and only
+fzf remembers the query, so `<space>'` reopens a tv picker empty.
 | `<space>?` | command palette: every key with a description; type a few words (`goto symbol`, `stage`), `<ret>` presses its keys |
 | `gn` / `gp` / `ga` | next / previous / last buffer |
 | `<space>b` | buffer menu: `q` close, `Q` close and discard, `o` close others, `w` / `W` write / write all |
@@ -339,7 +345,7 @@ Reopening a file puts the cursor back where it was (kept in
 | (automatic) | while typing a call, its signature shows above the cursor (`:lsp-signature-help` to show it on demand) |
 | `<space>a` | code actions |
 | `<space>r` | rename |
-| `<space>d` | diagnostics picker (fzf with a preview), for all open files |
+| `<space>d` | diagnostics picker (with a preview), for all open files |
 | `<space>D` | diagnostics list (a buffer: `<ret>` jumps) |
 | `<c-n>` / `<c-p>` | next / previous error or warning |
 | `<space>s` | goto symbol: type part of a name, `<tab>` through matches, `<ret>` jumps (no list buffer) |

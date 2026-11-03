@@ -412,6 +412,9 @@ map global user = ':format-smart<ret>' -docstring 'format buffer'
 # ─── picker (fzf in a tmux popup) ─────────────────────────────────────────────
 # bin/kak-picker runs the picker and sends the choice back. The fzf pickers
 # also send back their query, so <space>' reopens the last picker with it.
+# Picker UI: tv (television, uses its own config and theme) or fzf; switch with
+# :set-option global picker_tool fzf
+declare-option -docstring 'picker UI: tv or fzf' str picker_tool tv
 declare-option -hidden str picker_last
 declare-option -hidden str picker_query
 declare-option -hidden bool picker_resuming false
@@ -424,6 +427,7 @@ define-command -hidden -params 1.. picker-popup %{
         # Kakoune, not from tmux's copy, which keeps the value from when the
         # tmux server started.
         tmux display-popup -E -w 90% -h 85% -d "$PWD" -e "KAK_PICKER_QUERY=$q" \
+            -e "KAK_PICKER_TOOL=$kak_opt_picker_tool" \
             ${EDITOR:+-e "EDITOR=$EDITOR"} \
             ${FZF_DEFAULT_OPTS:+-e "FZF_DEFAULT_OPTS=$FZF_DEFAULT_OPTS"} \
             "$kak_config/bin/kak-picker" "$kak_session" "$kak_client" "$@" \
