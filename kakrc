@@ -710,6 +710,10 @@ define-command easifem-build -params 1 -docstring 'easifem-build <base|classes>:
     nop %sh{ "$kak_config/bin/easifem-build" "$kak_session" "$kak_client" "$1" >/dev/null 2>&1 </dev/null & }
     echo -markup "{Information}easifem: building %arg{1} in the background"
 }
+define-command easifem-install -params 1 -docstring 'easifem-install <pkg>: install in the background, without building first' %{
+    nop %sh{ "$kak_config/bin/easifem-build" "$kak_session" "$kak_client" "$1" install >/dev/null 2>&1 </dev/null & }
+    echo -markup "{Information}easifem: installing %arg{1} in the background"
+}
 define-command easifem-build-base    %{ easifem-build base }
 define-command easifem-build-classes %{ easifem-build classes }
 declare-option -hidden str easifem_log

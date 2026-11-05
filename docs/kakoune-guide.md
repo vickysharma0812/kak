@@ -440,6 +440,7 @@ until you `git add` them. In diffnav, `e` toggles the file tree and `/` searches
 | `<space>+` `n` / `p` | jump to the next / previous build error |
 | `<space>+` `u` or `:split-use` | split `use ..., only: a, b` into one import per line: in the selected lines, or the whole buffer when nothing is selected |
 | `:easifem-build-log base` / `classes` | open that package's log (`:easifem-build-errors` takes the same) |
+| `:easifem-install <pkg>` | install only, without `easifem dev` first; same background run, log, report and error list as a build |
 | `<space>g` | lazygit |
 
 Builds run `easifem dev <pkg> --verbose && easifem install <pkg> --no-download --verbose`

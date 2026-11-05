@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 # Build and install an easifem package in the background, then report to
-# Kakoune (and as a desktop notification).
-# usage: easifem-build <session> <client> <base|classes>
+# Kakoune (and as a desktop notification). With "install" as the last argument
+# only the install step runs, without "easifem dev" first.
+# usage: easifem-build <session> <client> <pkg> [install]
 # The full output goes to ~/.cache/easifem/easifem-build-<pkg>-log.txt.
 
-session=$1 client=$2 pkg=$3
+session=$1 client=$2 pkg=$3 mode=${4:-build}
 logdir=${XDG_CACHE_HOME:-$HOME/.cache}/easifem
 log=$logdir/easifem-build-$pkg-log.txt
 pidfile=$logdir/easifem-build-$pkg.pid
@@ -26,6 +27,14 @@ notify() {
     fi
 }
 
+if [ "$mode" = install ]; then
+    header="easifem install $pkg"
+    success="installed"
+else
+    header="easifem dev $pkg && easifem install $pkg"
+    success="built and installed"
+fi
+
 if [ -f "$pidfile" ] && kill -0 "$(cat "$pidfile")" 2>/dev/null; then
     send "echo -markup {Error}easifem: $pkg is already building"
     exit 0
@@ -35,8 +44,12 @@ trap 'rm -f "$pidfile"' EXIT
 
 start=$(date +%s)
 {
-    echo "# easifem dev $pkg && easifem install $pkg   ($(date '+%Y-%m-%d %H:%M:%S'))"
-    easifem dev "$pkg" --verbose && easifem install "$pkg" --no-download --verbose
+    echo "# $header   ($(date '+%Y-%m-%d %H:%M:%S'))"
+    if [ "$mode" = install ]; then
+        easifem install "$pkg" --no-download --verbose
+    else
+        easifem dev "$pkg" --verbose && easifem install "$pkg" --no-download --verbose
+    fi
 } >"$log" 2>&1
 status=$?
 secs=$(($(date +%s) - start))
@@ -44,8 +57,8 @@ took="$((secs / 60))m $((secs % 60))s"
 echo "# finished: exit $status ($took)" >>"$log"
 
 if [ $status -eq 0 ]; then
-    send "info -title easifem $(kq "$pkg: built and installed ($took)")"
-    notify "$pkg: built and installed ($took)"
+    send "info -title easifem $(kq "$pkg: $success ($took)")"
+    notify "$pkg: $success ($took)"
 else
     # Show the first compiler errors (file name only), or the end of the log.
     errors=$("$(dirname "$0")/easifem-errors" "$log")
@@ -60,5 +73,5 @@ else
     send "info -title $(kq "$title") $(kq "$body
 
 <space>+ e lists the errors, <space>+ l opens the log")"
-    notify "$pkg: build FAILED, <space>+ e lists the errors"
+    notify "$pkg: $mode FAILED, <space>+ e lists the errors"
 fi
