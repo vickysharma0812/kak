@@ -409,7 +409,7 @@ hook global WinSetOption filetype=(fortran|cmake|bibtex|toml|markdown|latex|json
 }
 map global user = ':format-smart<ret>' -docstring 'format buffer'
 
-# ─── picker (fzf in a tmux popup) ─────────────────────────────────────────────
+# ─── picker (in a tmux popup or a Rex floating pane) ─────────────────────────
 # bin/kak-picker runs the picker and sends the choice back. The fzf pickers
 # also send back their query, so <space>' reopens the last picker with it.
 # Picker UI: tv (television, uses its own config and theme) or fzf; switch with
@@ -420,20 +420,10 @@ declare-option -hidden str picker_query
 declare-option -hidden bool picker_resuming false
 define-command -hidden -params 1.. picker-popup %{
     set-option global picker_last %arg{1}
-    nop %sh{
-        q=; [ "$kak_opt_picker_resuming" = true ] && q=$kak_opt_picker_query
-        # tmux's environment lacks EDITOR; yazi needs it (bulk rename, `edit`).
-        # FZF_DEFAULT_OPTS (fzf's colours) comes from the shell that started
-        # Kakoune, not from tmux's copy, which keeps the value from when the
-        # tmux server started.
-        tmux display-popup -E -w 90% -h 85% -d "$PWD" -e "KAK_PICKER_QUERY=$q" \
-            -e "KAK_PICKER_TOOL=$kak_opt_picker_tool" \
-            ${EDITOR:+-e "EDITOR=$EDITOR"} \
-            ${FZF_DEFAULT_OPTS:+-e "FZF_DEFAULT_OPTS=$FZF_DEFAULT_OPTS"} \
-            "$kak_config/bin/kak-picker" "$kak_session" "$kak_client" "$@" \
-            >/dev/null 2>&1 </dev/null &
-    }
+    evaluate-commands %sh{ [ "$kak_opt_picker_resuming" = true ] || echo "set-option global picker_query ''" }
     set-option global picker_resuming false
+    popup-run 90 85 "KAK_PICKER_QUERY=%opt{picker_query}" "KAK_PICKER_TOOL=%opt{picker_tool}" -- \
+        "%val{config}/bin/kak-picker" %val{session} %val{client} %arg{@}
 }
 define-command picker-resume -docstring 'reopen the last picker, with its query' %{
     evaluate-commands %sh{
@@ -503,7 +493,7 @@ define-command -hidden picker-diagnostics-show %{
 }
 
 # Every mapping that has a description (Helix's <space>? command palette); the
-# chosen one's keys are typed into this tmux pane, so prompts and keys that
+# chosen one's keys are typed into this tmux or Rex pane, so prompts and keys that
 # wait for another key work as usual. The mappings are read once per session
 # (`debug mappings` writes to the read-only *debug* buffer, which can't be
 # cleaned up); :picker-palette-refresh reads them again.
@@ -609,9 +599,19 @@ hook global WinDisplay .* %{
 }
 
 # ─── misc ─────────────────────────────────────────────────────────────────────
-define-command -hidden popup -params 1.. -docstring 'run a command in a tmux popup' %{ nop %sh{
-    tmux display-popup -E -w 90% -h 90% -d "$PWD" "$@" >/dev/null 2>&1 </dev/null &
+# popup-run <width%> <height%> [VAR=value...] -- <command>: bin/kak-popup uses
+# tmux or Rex, whichever this client runs in (not the one that started the session).
+define-command -hidden popup-run -params 3.. %{ nop %sh{
+    (
+        export TMUX=$kak_client_env_TMUX TMUX_PANE=$kak_client_env_TMUX_PANE \
+            REX_SERVER=$kak_client_env_REX_SERVER REX_SESSION=$kak_client_env_REX_SESSION \
+            REX_BLOCK=$kak_client_env_REX_BLOCK REX_BIN_DIR=$kak_client_env_REX_BIN_DIR
+        exec "$kak_config/bin/kak-popup" "$kak_session" "$kak_client" "$@"
+    ) >/dev/null 2>&1 </dev/null &
 } }
+define-command -hidden popup -params 1.. -docstring 'run a command in a popup' %{
+    popup-run 90 90 -- %arg{@}
+}
 
 define-command lazygit -docstring 'lazygit in a popup' %{
     # refresh the branch and the diff gutter when lazygit exits

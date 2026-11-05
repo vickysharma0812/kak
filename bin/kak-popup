@@ -1,0 +1,85 @@
+#!/usr/bin/env bash
+# Runs a command in a popup over the Kakoune client that asked for it: a tmux
+# popup under tmux, a floating block under Rex (tmux wins when Kakoune runs in
+# tmux inside Rex). Waits for the command to finish.
+# usage: kak-popup <session> <client> <width%> <height%> [VAR=value...] -- <command> [args]
+# TMUX, TMUX_PANE and REX_* must be the client's (kakrc's popup-run passes them):
+# the Kakoune server may have been started in another terminal.
+
+session=$1 client=$2 width=$3 height=$4
+shift 4
+
+vars=()
+while [ $# -gt 0 ] && [ "$1" != -- ]; do
+    export "${1?}"
+    vars+=("$1")
+    shift
+done
+shift
+
+fail() {
+    printf 'evaluate-commands -client %s %%{ echo -markup "{Error}%s" }\n' "$client" "$1" |
+        kak -p "$session"
+    exit 1
+}
+
+if [ -n "$TMUX" ]; then
+    # tmux's environment lacks EDITOR; yazi needs it (bulk rename, `edit`).
+    # FZF_DEFAULT_OPTS (fzf's colours) comes from the shell that started
+    # Kakoune, not from tmux's copy, which keeps the value from when the tmux
+    # server started.
+    args=()
+    for v in "${vars[@]}"; do args+=(-e "$v"); done
+    [ -n "$EDITOR" ] && args+=(-e "EDITOR=$EDITOR")
+    [ -n "$FZF_DEFAULT_OPTS" ] && args+=(-e "FZF_DEFAULT_OPTS=$FZF_DEFAULT_OPTS")
+    exec tmux display-popup -E -w "$width%" -h "$height%" -d "$PWD" "${args[@]}" "$@"
+fi
+
+[ -n "$REX_BLOCK" ] || fail 'popups need tmux or Rex'
+
+# (a server started outside Rex doesn't have rex on its PATH)
+[ -n "$REX_BIN_DIR" ] && PATH=$PATH:$REX_BIN_DIR
+command -v jq >/dev/null || fail 'popups in Rex need jq'
+
+rex_session=$REX_SESSION editor=$REX_BLOCK
+# Keys to type into the editor once the popup is gone (see kak-picker's palette).
+export KAK_POPUP_KEYS
+KAK_POPUP_KEYS=$(mktemp "${TMPDIR:-/tmp}/kak-popup-keys.XXXXXX")
+trap 'rm -f "$KAK_POPUP_KEYS"' EXIT
+IFS=$'\t' read -r window zoomed < <(
+    rex session inspect "$rex_session" --json | jq -r --arg b "$editor" '
+        .windows[] | select(any(.layers[].blocks[]; .block_id == $b))
+        | [.window_id, .zoomed_block_id == $b] | @tsv'
+)
+[ -n "$window" ] || fail 'Rex does not know this pane'
+
+# Without a shell, so the command starts at once and sees Kakoune's environment
+# (Rex's own would lack EDITOR, FZF_DEFAULT_OPTS...), minus what describes the
+# terminal. No quick-exit hold: Rex would keep a popup open that is closed at once.
+block=$(
+    jq -n --arg session "$rex_session" --arg window "$window" --arg cwd "$PWD" \
+        --argjson w "$width" --argjson h "$height" '
+        ($w / 100) as $w | ($h / 100) as $h |
+        ($ENV | to_entries
+            | map(select(.key | test("^(kak_|TMUX|TERM|COLORTERM|REX_|PWD$|OLDPWD$|SHLVL$|_$|COLUMNS$|LINES$)") | not))
+            | map("\(.key)=\(.value)")) as $env |
+        {
+            session_id: $session, window_id: $window, focus: true,
+            bounds: [(1 - $w) / 2, (1 - $h) / 2, $w, $h],
+            layout: { block: {
+                flavor: "com.superlogical.terminal.shell", label: "kak",
+                options: {
+                    shell: "none", cwd: $cwd, exit: { quick_exit_threshold_ms: 0 },
+                    command: (["/usr/bin/env"] + $env + $ARGS.positional)
+                }
+            } }
+        }' --args -- "$@" |
+        rex api call -s "$rex_session" session.new_layer - | jq -er '.block_ids[0]'
+) || fail 'could not open a Rex floating pane'
+
+# Rex would focus a neighbouring pane next, and focusing the popup ended any zoom.
+rex wait -s "$rex_session" "$block" >/dev/null 2>&1
+rex focus -s "$rex_session" "$editor"
+[ "$zoomed" = true ] && rex zoom -s "$rex_session" "$editor" --on
+[ -s "$KAK_POPUP_KEYS" ] && rex send -s "$rex_session" -b "$editor" <"$KAK_POPUP_KEYS"
+exit 0

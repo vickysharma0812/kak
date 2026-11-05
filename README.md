@@ -29,7 +29,7 @@ formatters, tree-sitter grammar, theme and space-leader keys.
 
 - **Snippets**: VSCode-style snippets from `$SNIPPETS_PATH`, shared with Helix and
   Neovim, served by a patched simple-completion-language-server (see below).
-- **Pickers** in tmux popups: [television](https://github.com/alexpasmantier/television)
+- **Pickers** in tmux popups or Rex floating panes: [television](https://github.com/alexpasmantier/television)
   (`tv`, the default) or fzf for files, grep, buffers, diagnostics and a
   command palette of every described key, plus yazi and broot; `<space>'`
   reopens the last one (with its query, for fzf). Pick the UI with
@@ -71,12 +71,12 @@ the picked item, and `<tab>` with no menu open jumps to the next snippet placeho
 
 ## Requirements
 
-macOS with Homebrew, run inside **tmux** (the pickers are tmux popups) and started
-from **fish** (which sets `SNIPPETS_PATH`).
+macOS with Homebrew, run inside **tmux** or **Rex** (pickers and other popups are
+tmux popups or Rex floating panes, chosen per client) and started from **fish** (which sets `SNIPPETS_PATH`).
 
 - Kakoune, plus `cargo install kak-lsp kak-tree-sitter ktsctl`
 - The language servers and formatters in the table above
-- `fd`, `ripgrep`, `television` (`tv`), `fzf`, `bat`, `yazi`, `broot`, `lazygit`, `diffnav`, `perl`
+- `fd`, `ripgrep`, `television` (`tv`), `fzf`, `bat`, `yazi`, `broot`, `lazygit`, `diffnav`, `perl`, and `jq` under Rex
 - Helix with its grammars built (`hx --grammar build`): kak-tree-sitter reads the
   Fortran, TOML, Markdown and CMake grammars and queries in `~/.config/helix/runtime`, and
   Markdown's inline grammar and the JSON grammar from Homebrew's Helix (`/opt/homebrew/opt/helix`).
@@ -104,7 +104,8 @@ adjust it if Kakoune is installed elsewhere.
 | `bin/split-use-filter` | runs easifem's `split-use-only.fish` on piped text, for `:split-use` |
 | `bin/easifem-errors` | picks the gfortran errors out of a build log for `<space>+ e` |
 | `bin/kak-jump-labels` | labels for `gw` (jump to a word on screen) |
-| `bin/kak-picker` | tv or fzf (files, grep, buffers, diagnostics, palette), yazi and broot pickers in tmux popups |
+| `bin/kak-popup` | runs a command in a tmux popup or a Rex floating pane, whichever the client is in |
+| `bin/kak-picker` | tv or fzf (files, grep, buffers, diagnostics, palette), yazi and broot pickers, run by `kak-popup` |
 | `broot/kak.hjson` | broot verb for the picker: `<ret>` on a file opens it in Kakoune |
 | `bin/kak-snippet-flatten` | rewrites VSCode snippets into what kak-lsp can expand |
 | `bin/build-scls-kak` | builds the patched scls into `bin/scls-kak` (not tracked) |

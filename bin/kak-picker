@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# fzf pickers for Kakoune, run inside a tmux popup.
+# Pickers for Kakoune, run by bin/kak-popup in a tmux popup or a Rex floating pane.
 # usage: kak-picker <session> <client> <mode> [args]
 #   files | grep | buffers <list> | yazi <start> | broot <start>
 #   diagnostics <list> <project-root> <buffer> | palette <mappings> <tmux-pane>
@@ -53,6 +53,32 @@ tmux_keys() {
             esac
         else
             echo "${s:0:1}"
+            s=${s:1}
+        fi
+    done
+}
+
+# The same keys as the bytes a terminal sends, for kak-popup's `rex send`.
+raw_keys() {
+    local s=$1 k
+    while [ -n "$s" ]; do
+        if [[ $s == '<'*'>'* ]]; then
+            k=${s%%>*} k=${k#<} s=${s#*>}
+            case $k in
+            space) printf ' ' ;; ret) printf '\r' ;; esc) printf '\033' ;; tab) printf '\t' ;;
+            s-tab) printf '\033[Z' ;;
+            up) printf '\033[A' ;; down) printf '\033[B' ;;
+            right) printf '\033[C' ;; left) printf '\033[D' ;;
+            a-up) printf '\033[1;3A' ;; a-down) printf '\033[1;3B' ;;
+            a-right) printf '\033[1;3C' ;; a-left) printf '\033[1;3D' ;;
+            minus) printf -- - ;; plus) printf + ;; lt) printf '<' ;; gt) printf '>' ;;
+            semicolon) printf ';' ;; quote) printf "'" ;; dquote) printf '"' ;; percent) printf %% ;;
+            a-*) printf '\033%s' "${k#a-}" ;;
+            c-?) printf "\\$(printf %03o $(($(printf %d "'${k#c-}") & 31)))" ;;
+            *) printf %s "$k" ;;
+            esac
+        else
+            printf %s "${s:0:1}"
             s=${s:1}
         fi
     done
@@ -161,7 +187,7 @@ diagnostics)
     ;;
 palette)
     # $4: the output of `debug mappings` (kept for the session); $5: the
-    # client's tmux pane. Lists each described mapping with the keys that
+    # client's tmux pane (Rex: unused). Lists each described mapping with the keys that
     # reach it (following modes entered from normal mode, <space>, g or v)
     # and types the chosen keys.
     pane=$5
@@ -194,6 +220,12 @@ palette)
     fi
     rm -f "$menu"
     [ -n "$sel" ] || exit 0
+    if [ -n "${KAK_POPUP_KEYS-}" ]; then
+        # Rex: kak-popup types them after refocusing Kakoune, or a popup these
+        # keys open would lose the focus.
+        raw_keys "${sel##*$'\t'}" >"$KAK_POPUP_KEYS"
+        exit 0
+    fi
     keys=()
     while IFS= read -r k; do keys+=("$k"); done < <(tmux_keys "${sel##*$'\t'}")
     tmux send-keys -t "$pane" "${keys[@]}"

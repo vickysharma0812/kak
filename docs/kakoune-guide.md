@@ -618,6 +618,7 @@ Then restart Kakoune (each session starts its own kak-lsp).
   restart Kakoune: `kill (cat $TMPDIR/kak-tree-sitter/pid)`
 - **No snippets**: start Kakoune from fish (it sets `SNIPPETS_PATH`), and check
   that `bin/scls-kak` exists; see [Patched tools](#scls)
-- **Pickers do nothing**: Kakoune must run inside tmux
+- **Pickers do nothing**: Kakoune must run inside tmux or Rex (Rex also needs
+  `jq`); a popup that cannot open says why in the status line
 - **`<space>E` (broot) opens nothing**: `<ret>` must be on a file, not a folder;
   check `broot/kak.hjson` exists
