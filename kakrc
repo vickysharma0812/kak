@@ -479,7 +479,7 @@ define-command picker-resume -docstring 'reopen the last picker, with its query'
     evaluate-commands %sh{
         case $kak_opt_picker_last in
             '') echo "fail 'no picker opened yet'" ;;
-            yazi | broot) echo "$kak_opt_picker_last" ;;
+            yazi | broot | br-cwd) echo "$kak_opt_picker_last" ;;
             *) echo "set-option global picker_resuming true; picker-$kak_opt_picker_last" ;;
         esac
     }
@@ -492,10 +492,20 @@ define-command yazi -docstring 'yazi file manager; opens the chosen file(s)' %{ 
     if [ -f "$kak_buffile" ]; then start=$kak_buffile; else start=$PWD; fi
     printf "picker-popup yazi '%s'\n" "$(printf %s "$start" | sed "s/'/''/g")"
 } }
-define-command broot -docstring 'broot file tree; <ret> opens the file' %{ evaluate-commands %sh{
+define-command broot -docstring 'broot file tree at the project root; <ret> opens the file' %{ evaluate-commands %sh{
+    # start at the git root of the current file (or of the cwd); outside a
+    # repository, start in that directory itself
+    if [ -f "$kak_buffile" ]; then dir=${kak_buffile%/*}; else dir=$PWD; fi
+    start=$(git -C "$dir" rev-parse --show-toplevel 2>/dev/null)
+    [ -n "$start" ] || start=$dir
+    printf "picker-popup broot '%s'\n" "$(printf %s "$start" | sed "s/'/''/g")"
+} }
+define-command br-cwd -docstring 'broot file tree in the current file''s directory; <ret> opens the file' %{ evaluate-commands %sh{
     # start in the current file's directory; fall back to the cwd
     if [ -f "$kak_buffile" ]; then start=${kak_buffile%/*}; else start=$PWD; fi
     printf "picker-popup broot '%s'\n" "$(printf %s "$start" | sed "s/'/''/g")"
+    # so that <space>' reopens this command, not the project-root one
+    echo "set-option global picker_last br-cwd"
 } }
 define-command picker-buffers -docstring 'pick a buffer' %{ evaluate-commands %sh{
     list=$(mktemp "${TMPDIR:-/tmp}/kak-buffers.XXXXXX")
@@ -568,7 +578,7 @@ map global user f ':picker-files<ret>'   -docstring 'files'
 map global user / ':picker-grep<ret>'    -docstring 'live grep'
 map global user , ':picker-buffers<ret>' -docstring 'buffer picker'
 map global user e ':yazi<ret>'           -docstring 'yazi file manager'
-map global user E ':broot<ret>'          -docstring 'broot file tree'
+map global user E ':broot<ret>'          -docstring 'broot file tree at the project root'
 map global user d ':picker-diagnostics<ret>' -docstring 'diagnostics picker'
 map global user ? ':picker-palette<ret>' -docstring 'command palette (all keys)'
 map global user <quote> ':picker-resume<ret>' -docstring 'last picker'

@@ -324,7 +324,8 @@ Registers worth knowing: `"` last yank/delete, `/` last search, `@` last macro,
 |---|---|
 | `<space>f` | find a file (fzf) |
 | `<space>e` | yazi: pick a file, `<ret>` opens it in this session (bulk rename, `r` on selected files, edits the names in your `$EDITOR`) |
-| `<space>E` | broot: type to filter the tree, `<ret>` on a file opens it (on a folder, enters it); `<esc>` goes back / quits |
+| `<space>E` | broot at the project root (the file's git root, or its directory outside a repository): type to filter the tree, `<ret>` on a file opens it (on a folder, enters it); `<esc>` goes back / quits |
+| `:br-cwd` | the same broot, in the current file's directory |
 | `<space>,` | pick an open buffer |
 | `<space>'` | reopen the last picker with the text you had typed (also after `<esc>`) |
 | `ctrl-t` (in a picker) | show / hide the preview, as in Helix |
