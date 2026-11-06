@@ -314,7 +314,7 @@ Registers worth knowing: `"` last yank/delete, `/` last search, `@` last macro,
 |---|---|
 | `<space>f` | find a file |
 | `<space>e` | yazi: pick a file, `<ret>` opens it in this session (bulk rename, `r` on selected files, edits the names in your `$EDITOR`) |
-| `<space>E` | broot: type to filter the tree, `<ret>` on a file opens it (on a folder, enters it); `<esc>` goes back / quits |
+| `<space>E` | broot in the project (git) root: type to filter the tree, `<ret>` on a file opens it (on a folder, enters it); `<esc>` goes back / quits. `:broot-here` does the same in the current file's directory |
 | `<space>,` | pick an open buffer |
 | `<space>'` | reopen the last picker with the text you had typed (also after `<esc>`) |
 | `ctrl-t` (in a picker) | show / hide the preview, as in Helix (fzf; tv uses its own keys) |
@@ -436,11 +436,13 @@ until you `git add` them. In diffnav, `e` toggles the file tree and `/` searches
 | `<space>+` `e` | list the compiler errors of the latest build; `<ret>` on one opens the file there |
 | `<space>+` `n` / `p` | jump to the next / previous build error |
 | `<space>+` `u` or `:split-use` | split `use ..., only: a, b` into one import per line: in the selected lines, or the whole buffer when nothing is selected |
-| `:easifem-build-log base` / `classes` | open that package's log (`:easifem-build-errors` takes the same) |
+| `:easifem-install <pkg>` | install a package **in the background**, without building first; `<tab>` completes the package names |
+| `:easifem-build-log <pkg>` | open that package's log (`:easifem-build-errors` takes the same) |
 | `<space>g` | lazygit |
 
-Builds run `easifem dev <pkg> -q && easifem install <pkg> --no-download -q` with
-no popup, so you keep editing. When the build ends:
+Builds run `easifem dev <pkg> --verbose && easifem install <pkg> --no-download --verbose`,
+and `:easifem-install` runs only `easifem install <pkg> --no-download --verbose`,
+both with no popup, so you keep editing. When the build ends:
 
 - **success**: an info box and a macOS notification ("base: built and installed (2m 13s)")
 - **failure**: an info box with the first compiler errors (or the end of the
@@ -453,8 +455,9 @@ directory are shown relative to it.
 
 Logs: `~/.cache/easifem/easifem-build-base-log.txt` and
 `easifem-build-classes-log.txt`, rewritten by each build (an open log buffer
-reloads by itself). Pressing `b` again while that package is building only says
-it is already building. Helix's `+` menu still uses the tmux popup scripts.
+reloads by itself), and `:easifem-install` writes to the same log for its
+package. Pressing `b` again while that package is building or installing only
+says so. Helix's `+` menu still uses the tmux popup scripts.
 
 `:split-use` runs `$easifem/config/scripts/split-use-only.fish` through the
 script's stdin mode, so unsaved edits count and the file is not written.

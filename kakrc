@@ -429,7 +429,7 @@ define-command picker-resume -docstring 'reopen the last picker, with its query'
     evaluate-commands %sh{
         case $kak_opt_picker_last in
             '') echo "fail 'no picker opened yet'" ;;
-            yazi | broot) echo "$kak_opt_picker_last" ;;
+            yazi | broot | broot-here) echo "$kak_opt_picker_last" ;;
             *) echo "set-option global picker_resuming true; picker-$kak_opt_picker_last" ;;
         esac
     }
@@ -442,10 +442,17 @@ define-command yazi -docstring 'yazi file manager; opens the chosen file(s)' %{ 
     if [ -f "$kak_buffile" ]; then start=$kak_buffile; else start=$PWD; fi
     printf "picker-popup yazi '%s'\n" "$(printf %s "$start" | sed "s/'/''/g")"
 } }
-define-command broot -docstring 'broot file tree; <ret> opens the file' %{ evaluate-commands %sh{
+define-command broot -docstring 'broot in the project root; <ret> opens the file' %{ evaluate-commands %sh{
+    # start at the current file's git root; fall back to the cwd
+    if [ -f "$kak_buffile" ]; then dir=${kak_buffile%/*}; else dir=$PWD; fi
+    start=$(git -C "$dir" rev-parse --show-toplevel 2>/dev/null) || start=$PWD
+    printf "picker-popup broot '%s'\n" "$(printf %s "$start" | sed "s/'/''/g")"
+} }
+define-command broot-here -docstring "broot in the current file's directory; <ret> opens the file" %{ evaluate-commands %sh{
     # start in the current file's directory; fall back to the cwd
     if [ -f "$kak_buffile" ]; then start=${kak_buffile%/*}; else start=$PWD; fi
     printf "picker-popup broot '%s'\n" "$(printf %s "$start" | sed "s/'/''/g")"
+    echo 'set-option global picker_last broot-here'   # for <space>'
 } }
 define-command picker-buffers -docstring 'pick a buffer' %{ evaluate-commands %sh{
     list=$(mktemp "${TMPDIR:-/tmp}/kak-buffers.XXXXXX")
@@ -518,7 +525,7 @@ map global user f ':picker-files<ret>'   -docstring 'files'
 map global user / ':picker-grep<ret>'    -docstring 'live grep'
 map global user , ':picker-buffers<ret>' -docstring 'buffer picker'
 map global user e ':yazi<ret>'           -docstring 'yazi file manager'
-map global user E ':broot<ret>'          -docstring 'broot file tree'
+map global user E ':broot<ret>'          -docstring 'broot in the project root'
 map global user d ':picker-diagnostics<ret>' -docstring 'diagnostics picker'
 map global user ? ':picker-palette<ret>' -docstring 'command palette (all keys)'
 map global user <quote> ':picker-resume<ret>' -docstring 'last picker'
@@ -647,6 +654,14 @@ define-command easifem-build -params 1 -docstring 'easifem-build <base|classes>:
 }
 define-command easifem-build-base    %{ easifem-build base }
 define-command easifem-build-classes %{ easifem-build classes }
+# Install without rebuilding: easifem install <pkg> --no-download --verbose.
+# Shares the log, the errors list and the lock of easifem-build.
+define-command easifem-install -params 1 -docstring 'easifem-install <pkg>: install in the background, without downloading' -shell-script-candidates %{
+    printf '%s\n' all extpkgs openblas lapack95 sparsekit fftw superlu arpack lis base classes materials kernels
+} %{
+    nop %sh{ "$kak_config/bin/easifem-build" "$kak_session" "$kak_client" "$1" install >/dev/null 2>&1 </dev/null & }
+    echo -markup "{Information}easifem: installing %arg{1} in the background"
+}
 declare-option -hidden str easifem_log
 define-command -hidden easifem-find-log -params ..1 %{
     evaluate-commands %sh{
@@ -657,13 +672,13 @@ define-command -hidden easifem-find-log -params ..1 %{
         printf "set-option global easifem_log '%s'\n" "$log"
     }
 }
-define-command easifem-build-log -params ..1 -docstring 'easifem-build-log [base|classes]: open a build log (default: the latest)' %{
+define-command easifem-build-log -params ..1 -docstring 'easifem-build-log [pkg]: open a build log (default: the latest)' %{
     easifem-find-log %arg{@}
     edit -existing %opt{easifem_log}
     set-option buffer autoreload yes
 }
 # <ret> on an error opens it (as in the *make* buffer of :make).
-define-command easifem-build-errors -params ..1 -docstring 'easifem-build-errors [base|classes]: list the compiler errors of a build (default: the latest)' %{
+define-command easifem-build-errors -params ..1 -docstring 'easifem-build-errors [pkg]: list the compiler errors of a build (default: the latest)' %{
     easifem-find-log %arg{@}
     evaluate-commands -save-regs '"' %sh{
         # paths under the working directory are shown relative to it

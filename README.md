@@ -100,7 +100,7 @@ adjust it if Kakoune is installed elsewhere.
 | `autoload/fortran.kak` | Fortran filetype and indentation |
 | `colors/gruvbox.kak` | default theme, including tree-sitter faces |
 | `colors/catppuccin-mocha.kak` | alternative theme, same faces |
-| `bin/easifem-build` | background easifem build with log and notifications |
+| `bin/easifem-build` | background easifem build or install with log and notifications |
 | `bin/split-use-filter` | runs easifem's `split-use-only.fish` on piped text, for `:split-use` |
 | `bin/easifem-errors` | picks the gfortran errors out of a build log for `<space>+ e` |
 | `bin/kak-jump-labels` | labels for `gw` (jump to a word on screen) |
