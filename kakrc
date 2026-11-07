@@ -275,12 +275,28 @@ hook global BufSetOption filetype=bibtex %{
 }
 
 hook global WinSetOption filetype=(fortran|cmake|toml|latex|bibtex) %{
-    lsp-enable-window
-    # no breadcrumbs (Helix has none): saves a documentSymbol request per idle
-    remove-hooks window lsp-breadcrumbs
-    lsp-inlay-diagnostics-enable window
-    lsp-inlay-hints-enable window
+    # A window that changes filetype and comes back is already set up; skip it,
+    # but keep any other failure visible in *debug*.
+    try %{
+        lsp-enable-window
+        # no breadcrumbs (Helix has none): saves a documentSymbol request per idle
+        remove-hooks window lsp-breadcrumbs
+        lsp-inlay-diagnostics-enable window
+        lsp-inlay-hints-enable window
+    } catch %{
+        evaluate-commands %sh{
+            case $kak_error in
+                *'already enabled'*) ;;
+                *) echo 'echo -debug "lsp setup: %val{error}"' ;;
+            esac
+        }
+    }
 }
+
+# lsp-workspace-symbol-incr sends its queries from the *symbols* buffer, and
+# kak-lsp refuses to send from a window without LSP enabled (silently: the
+# command wraps it in a try). Above we only enable LSP in source windows.
+hook global WinCreate \*symbols\* %{ set-option window lsp_fail_if_disabled nop }
 
 set-option global lsp_hover_max_info_lines 30
 
@@ -633,7 +649,7 @@ hook global WinSetOption filetype=fortran %{
     map window tree-sitter-search     I ':tree-sitter-text-objects comment.around search_next<ret>' -docstring 'if / select'
     map window tree-sitter-search-rev I ':tree-sitter-text-objects comment.around search_prev<ret>' -docstring 'if / select'
     # (not filetype=.*: that also matches this fortran and unmaps at once)
-    hook -once -always window WinSetOption filetype=(?!fortran$).* %{
+    hook -once -always window WinSetOption filetype=(?!fortran).* %{
         unmap window object l
         unmap window object I
         unmap window object B
