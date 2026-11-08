@@ -5,3 +5,5 @@ kakrc.bak-*
 .DS_Store
 # patched scls, built by bin/build-scls-kak
 bin/scls-kak
+# rumdl (markdown linter) cache
+.rumdl_cache/
