@@ -38,8 +38,8 @@ formatters, tree-sitter grammar, theme and space-leader keys.
 - **Auto pairs** like Helix: brackets and quotes close themselves, the closing
   character is stepped over, and `<backspace>` deletes an empty pair.
 - **Helix-like completion**: `<tab>`/`<s-tab>` or `<down>`/`<up>` move through the menu, `<ret>` accepts.
-- **Git signs**: added / changed / deleted line marks (like gitsigns), hunk jumps,
-  stage / revert selected lines and blame, using Kakoune's built-in `git` command.
+- **Git signs**: added / changed / deleted line marks (like gitsigns),
+  using Kakoune's built-in `git` command.
 - Gruvbox dark theme matching Helix's (Catppuccin Mocha kept as an alternative:
   `:colorscheme catppuccin-mocha`), drawn on the terminal's own background
   so Ghostty's `background-opacity` shows through, and a Helix-style modeline
@@ -51,8 +51,8 @@ formatters, tree-sitter grammar, theme and space-leader keys.
 
 | Key | Action | Key | Action |
 |---|---|---|---|
-| `<space>f` | files | `<space>/` | live grep |
-| `<space>,` | buffer picker | `<space>e` / `<space>E` | yazi / broot |
+| `<space>F` | files | `<space>/` | live grep |
+| `<space>,` | buffer picker | `<space>e` / `<space>f` | yazi / broot |
 | `<space>b` | buffer mode | `gn` / `gp` / `ga` | next / previous / last buffer |
 | `<space>k` | hover | `<space>a` | code action |
 | `<space>r` | rename | `<space>d` | diagnostics picker |
@@ -62,7 +62,7 @@ formatters, tree-sitter grammar, theme and space-leader keys.
 | `<space>=` | format | `<space>c` | comment lines |
 | `<space>t` | tree-sitter menu | `<a-up>` / `<a-down>` | select parent / child node |
 | `<space>g` / `<space>G` | lazygit / diffnav | `<space>+` | easifem background build (`b`, `c`), its errors (`e`, `n`, `p`) and log (`l`), run test (`+`), split `use ..., only:` lists (`u`) |
-| `<space>h` | git: next/prev change, stage, revert, blame | | |
+| `<space>j` / `<space>J` | jjui / jjdiff | | |
 | `<space>p` / `<space>P` | paste from clipboard | `mm` | matching bracket |
 | `gw` | jump to a word by its label | | |
 | `ms` / `mr` / `md` | surround add / replace / delete | `mi` / `ma` | select inside / around |
@@ -77,7 +77,7 @@ from **fish** (which sets `SNIPPETS_PATH`).
 
 - Kakoune, plus `cargo install kak-lsp kak-tree-sitter ktsctl`
 - The language servers and formatters in the table above
-- `fd`, `ripgrep`, `fzf`, `bat`, `yazi`, `broot`, `lazygit`, `diffnav`, `perl`
+- `fd`, `ripgrep`, `fzf`, `bat`, `yazi`, `broot`, `lazygit`, `diffnav`, `jj`, `jjui`, `perl`
 - Helix with its grammars built (`hx --grammar build`): kak-tree-sitter reads the
   Fortran, TOML, Markdown and CMake grammars and queries in `~/.config/helix/runtime`, and
   Markdown's inline grammar and the JSON grammar from the system Helix runtime

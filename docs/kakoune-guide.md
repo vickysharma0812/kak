@@ -69,7 +69,6 @@ Most keys are the same (`w` `b` `e` `f` `t` `x` `%` `s` `S` `C` `,` `;` `&` `|`
 | `]f` (next function) | `<space>t` then `/f` | `]f` here extends to the function end |
 | `<space>y` / `<space>p` | `y` / `<space>p` | `y` already copies to the macOS clipboard |
 | `ctrl-c` (comment) | `<space>c` | |
-| `]g` / `[g` (next / previous change) | `<space>hn` / `<space>hp` | see [Git](#git) |
 | `:bc` | `:db` or `<space>b` `q` | close the buffer |
 | `gw` (jump labels) | same | added in this config; `<c-o>` jumps back |
 | `mm` `ms` `mr` `md` `mi` `ma` | same | added in this config (see [Surround](#surround-helixs-m-mode)) |
@@ -322,9 +321,9 @@ Registers worth knowing: `"` last yank/delete, `/` last search, `@` last macro,
 
 | Key | Action |
 |---|---|
-| `<space>f` | find a file (fzf) |
+| `<space>F` | find a file (fzf) |
 | `<space>e` | yazi: pick a file, `<ret>` opens it in this session (bulk rename, `r` on selected files, edits the names in your `$EDITOR`) |
-| `<space>E` | broot at the project root (the file's git root, or its directory outside a repository): type to filter the tree, `<ret>` on a file opens it (on a folder, enters it); `<esc>` goes back / quits |
+| `<space>f` | broot at the project root (the file's git root, or its directory outside a repository): type to filter the tree, `<ret>` on a file opens it (on a folder, enters it); `<esc>` goes back / quits |
 | `:br-cwd` | the same broot, in the current file's directory |
 | `<space>,` | pick an open buffer |
 | `<space>'` | reopen the last picker with the text you had typed (also after `<esc>`) |
@@ -405,25 +404,15 @@ Files in a git repo get marks next to the line numbers, like gitsigns or Helix's
 diff gutter: **green** added, **blue** changed, **red** `_` / `‾` deleted lines.
 They compare the buffer with what is **staged**, so staging a change clears its
 marks. They update when the file is shown, after `<esc>` from insert mode, on
-save, when you return to the terminal, and when lazygit closes. The status line
-shows the branch.
-
-`<space>h` opens the git menu:
+save, when you return to the terminal, and when lazygit or jjui closes. The status line
+shows the branch, or in a jj repository the change id and nearest bookmarks.
 
 | Key | Action |
 |---|---|
-| `<space>h` `n` / `p` | next / previous change (Helix: `]g` / `[g`) |
-| `<space>h` `s` | stage the selected lines (cursor on a line = that line; `x` / `xx` for more) |
-| `<space>h` `u` | unstage the selected lines |
-| `<space>h` `r` | revert the selected lines to the staged version (save first) |
-| `<space>h` `b` | toggle blame; `<ret>` on a line shows its commit |
-| `<space>h` `d` | diff of this file in a buffer |
-| `<space>h` `h` / `g` | hide / show the marks |
 | `<space>g` | lazygit (commit, push, branches) |
 | `<space>G` | diffnav: browse all uncommitted changes (staged and not) with a file tree; `q` closes |
-
-Revert changes the file on disk and reloads it, so it refuses while the buffer
-has unsaved edits (`:w` first). Check the selection before pressing `r`.
+| `<space>j` | jjui, in the jj repository of the current file; commit messages open in `kak` |
+| `<space>J` | jjdiff: browse the working-copy change in diffnav; `:jjdiff -r xyz` takes any `jj diff` arguments |
 
 `:diffnav` takes any `git diff` arguments, for other diffs: `:diffnav --cached`
 (staged only), `:diffnav main` (against a branch), `:diffnav HEAD~3 -- src`.
@@ -626,5 +615,5 @@ Then restart Kakoune (each session starts its own kak-lsp).
 - **No snippets**: start Kakoune from fish (it sets `SNIPPETS_PATH`), and check
   that `bin/scls-kak` exists; see [Patched tools](#scls)
 - **Pickers do nothing**: Kakoune must run inside tmux
-- **`<space>E` (broot) opens nothing**: `<ret>` must be on a file, not a folder;
+- **`<space>f` (broot) opens nothing**: `<ret>` must be on a file, not a folder;
   check `broot/kak.hjson` exists

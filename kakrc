@@ -2,8 +2,8 @@
 # Old config: kakrc.bak-2026-10-27
 #
 # Leader is <space> (Kakoune's user mode), like Helix's space mode.
-#   <space>f  files          <space>/  live grep       <space>,  buffer picker
-#   <space>e  yazi           <space>E  broot           <space>h  git hunks / blame
+#   <space>F  files          <space>/  live grep       <space>,  buffer picker
+#   <space>e  yazi           <space>f  broot
 #   <space>b  buffer mode    gn / gp   next / prev buffer   ga  last buffer
 #   <space>s  goto symbol    <space>S  workspace syms  <space>d  diagnostics picker
 #   <space>D  diagnostics list (buffer)  <space>?  command palette  <space>'  last picker
@@ -11,6 +11,7 @@
 #   <space>=  format         <space>c  comment         <space>t  tree-sitter
 #   <space>l  all LSP cmds (l s goto symbol, l S symbol list)
 #   <space>g  lazygit        <space>G  diffnav         <space>+  easifem build/test
+#   <space>j  jjui           <space>J  jjdiff
 #   gd / gr / gy             definition / references / type definition
 #   m         match / surround (mm ms mr md mi ma), as in Helix
 #   gw        jump to a word by its two-letter label, as in Helix
@@ -246,6 +247,17 @@ hook global BufSetOption filetype=toml %{
 }
 
 # Markdown: no language server (formatting is rumdl's command line, below).
+hook global BufSetOption filetype=markdown %{
+    set-option buffer lsp_servers %{
+        [rumdl]
+        root_globs = [ ".git", ".rumdl.toml", "rumdl.toml", ".marksman.toml"]
+        args = ["server"]
+        [iwes]
+        root_globs = [ ".git", ".iwe", ".marksman.toml"]
+        # args = [""]
+    }
+    set-option -add buffer lsp_servers %opt{lsp_scls}
+}
 
 hook global BufSetOption filetype=latex %{
     set-option buffer lsp_servers %{
@@ -590,11 +602,11 @@ define-command picker-palette-refresh -docstring 're-read the mappings for the p
 }
 hook global KakEnd .* %{ nop %sh{ rm -f "$kak_opt_picker_palette" } }
 
-map global user f ':picker-files<ret>'   -docstring 'files'
+map global user F ':picker-files<ret>'   -docstring 'files'
 map global user / ':picker-grep<ret>'    -docstring 'live grep'
 map global user , ':picker-buffers<ret>' -docstring 'buffer picker'
 map global user e ':yazi<ret>'           -docstring 'yazi file manager'
-map global user E ':broot<ret>'          -docstring 'broot file tree at the project root'
+map global user f ':broot<ret>'          -docstring 'broot file tree at the project root'
 map global user d ':picker-diagnostics<ret>' -docstring 'diagnostics picker'
 map global user ? ':picker-palette<ret>' -docstring 'command palette (all keys)'
 map global user <quote> ':picker-resume<ret>' -docstring 'last picker'
@@ -708,6 +720,47 @@ define-command lazygit -docstring 'lazygit in a popup' %{
     # refresh the branch and the diff gutter when lazygit exits
     popup sh -c %sh{
         printf 'lazygit; echo "evaluate-commands -client %s git-refresh" | kak -p %s' "$kak_client" "$kak_session"
+    }
+}
+
+define-command jjui -docstring 'jjui in a popup, in the jj repository of the current file' %{
+    evaluate-commands %sh{
+        if [ -f "$kak_buffile" ]; then dir=${kak_buffile%/*}; else dir=$PWD; fi
+        root=$(cd "$dir" 2>/dev/null && jj root 2>/dev/null)
+        if [ -z "$root" ]; then
+            echo "fail 'jjui: not in a jj repository'"
+            exit
+        fi
+        # jj moves files and HEAD too, so refresh as after lazygit. JJ_EDITOR
+        # is set here only: jj outside this popup keeps its ui.editor.
+        printf "popup sh -c 'cd \"\$1\" && JJ_EDITOR=kak jjui; echo \"evaluate-commands -client %s git-refresh\" | kak -p %s' jjui '%s'\n" \
+            "$kak_client" "$kak_session" "$(printf %s "$root" | sed "s/'/''/g")"
+    }
+}
+
+# The working-copy change by default; any `jj diff` arguments work too:
+# :jjdiff -r xyz, :jjdiff --from main --to @
+define-command jjdiff -params .. -docstring 'jjdiff [<jj diff args>]: browse a jj diff in a popup (default: the working-copy change)' %{
+    evaluate-commands %sh{
+        if [ -f "$kak_buffile" ]; then dir=${kak_buffile%/*}; else dir=$PWD; fi
+        root=$(cd "$dir" 2>/dev/null && jj root 2>/dev/null)
+        if [ -z "$root" ]; then
+            echo "fail 'jjdiff: not in a jj repository'"
+            exit
+        fi
+        cd "$root" || exit
+        if ! changed=$(jj diff --name-only "$@" 2>/dev/null); then
+            echo "fail 'jjdiff: jj diff failed (a bad revision?)'"
+            exit
+        fi
+        if [ -z "$changed" ]; then
+            echo "echo 'jjdiff: no changes'"
+            exit
+        fi
+        printf "popup sh -c 'cd \"\$1\" && shift && jj --no-pager diff --git \"\$@\" | diffnav' jjdiff '%s'" \
+            "$(printf %s "$root" | sed "s/'/''/g")"
+        for a; do printf " '%s'" "$(printf %s "$a" | sed "s/'/''/g")"; done
+        echo
     }
 }
 
@@ -833,6 +886,8 @@ define-command easifem-run-test -docstring 'easifem run on this file' %{
 map global user c ':comment-line<ret>' -docstring 'comment lines'
 map global user g ':lazygit<ret>'      -docstring 'lazygit'
 map global user G ':diffnav<ret>'      -docstring 'diffnav: uncommitted changes'
+map global user j ':jjui<ret>'         -docstring 'jjui'
+map global user J ':jjdiff<ret>'       -docstring 'jjdiff: working-copy change'
 declare-user-mode easifem
 map global user    + ':enter-user-mode easifem<ret>'   -docstring 'easifem build/test'
 map global easifem b ':easifem-build-base<ret>'        -docstring 'build base'
@@ -1033,7 +1088,7 @@ hook global BufCreate .* %{ set-option buffer modeline_bufname %sh{ printf %s "$
 
 # Git branch of the file's directory (short commit when detached), like Helix's
 # version-control element. One git call when a buffer is shown, when the terminal
-# regains focus, and after lazygit closes.
+# regains focus, and after lazygit or jjui closes.
 declare-option -hidden str modeline_branch
 define-command -hidden modeline-update-branch %{
     set-option buffer modeline_branch %sh{
@@ -1041,6 +1096,25 @@ define-command -hidden modeline-update-branch %{
         b=$(git branch --show-current 2>/dev/null) || exit
         [ -n "$b" ] || b=$(git rev-parse --short HEAD 2>/dev/null)
         [ -n "$b" ] && printf ' %s ' "$b"
+    }
+}
+
+# What the status line shows: in a jj repository the working copy's change id
+# and the nearest bookmarks, otherwise the git branch. Kept apart from
+# modeline_branch, which decides whether the git diff marks apply and so must
+# stay empty when there is no git repository. --ignore-working-copy because
+# this runs in the background: it must not snapshot files or record operations.
+declare-option -hidden str modeline_vcs
+define-command -hidden modeline-update-vcs %{
+    set-option buffer modeline_vcs %sh{
+        v=$(cd "${kak_buffile%/*}" 2>/dev/null && jj --ignore-working-copy --no-pager --color never log \
+            --no-graph -r '@ | heads(::@ & bookmarks())' \
+            -T 'if(current_working_copy, change_id.short(8) ++ " ") ++ local_bookmarks.map(|b| b.name()).join(" ") ++ " "' 2>/dev/null)
+        if [ -n "$v" ]; then
+            printf ' %s ' "$(printf %s "$v" | tr -s ' ' | sed 's/ *$//')"
+        else
+            printf %s "$kak_opt_modeline_branch"
+        fi
     }
 }
 hook global WinDisplay .* git-refresh
@@ -1057,7 +1131,7 @@ hook global NormalIdle .* modeline-update-percent
 hook global InsertIdle .* modeline-update-percent
 hook global WinDisplay .* modeline-update-percent
 
-set-option global modelinefmt '{ModelineMode} %opt{modeline_mode} {StatusLine} {StatusLineInfo}%opt{modeline_bufname}{StatusLine} {ModelineBranch}%opt{modeline_branch}{StatusLine}{{context_info}} {{mode_info}} '
+set-option global modelinefmt '{ModelineMode} %opt{modeline_mode} {StatusLine} {StatusLineInfo}%opt{modeline_bufname}{StatusLine} {ModelineBranch}%opt{modeline_vcs}{StatusLine}{{context_info}} {{mode_info}} '
 set-option -add global modelinefmt %opt{lsp_modeline}
 set-option -add global modelinefmt ' {ModelineError}● %opt{lsp_diagnostic_error_count} {ModelineWarning}▲ %opt{lsp_diagnostic_warning_count}{StatusLine}  {StatusLineValue}%val{cursor_line}:%opt{modeline_percent}{StatusLine}  {ModelineDim}%opt{filetype} '
 
@@ -1068,6 +1142,7 @@ set-option -add global modelinefmt ' {ModelineError}● %opt{lsp_diagnostic_erro
 # such as *debug* are skipped.
 define-command -hidden git-refresh %{
     modeline-update-branch
+    modeline-update-vcs
     evaluate-commands %sh{ [ -n "$kak_opt_modeline_branch" ] && [ -f "$kak_buffile" ] && echo 'gitsigns-show' }
 }
 define-command -hidden gitsigns-update %{
@@ -1090,24 +1165,3 @@ define-command -hidden gitsigns-show %{
     try %{ remove-highlighter window/git-diff }
     try %{ add-highlighter window/gitsigns flag-lines Default gitsigns_flags }
 }
-define-command -hidden gitsigns-hide %{
-    try %{ remove-highlighter window/gitsigns }
-}
-
-# Revert rewrites the file from git, so unsaved edits would be mixed in.
-define-command -hidden gitsigns-revert %{
-    evaluate-commands %sh{ [ "$kak_modified" = true ] && echo "fail 'git: save the buffer first'" }
-    git apply --reverse
-}
-
-declare-user-mode git
-map global user h ':enter-user-mode git<ret>'        -docstring 'git hunks'
-map global git  n ':git next-hunk<ret>'              -docstring 'next change'
-map global git  p ':git prev-hunk<ret>'              -docstring 'previous change'
-map global git  s ':git apply --cached<ret>'         -docstring 'stage selected lines'
-map global git  u ':git apply --cached --reverse<ret>' -docstring 'unstage selected lines'
-map global git  r ':gitsigns-revert<ret>'            -docstring 'revert selected lines to the index'
-map global git  b ':git blame<ret>'                  -docstring 'toggle blame (<ret>: show commit)'
-map global git  d ':git diff -- %val{buffile}<ret>'  -docstring 'diff of this file'
-map global git  h ':gitsigns-hide<ret>'             -docstring 'hide the marks (<space>hg shows them)'
-map global git  g ':gitsigns-show<ret>'             -docstring 'show the marks'
