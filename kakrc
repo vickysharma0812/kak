@@ -99,7 +99,7 @@ lsp-auto-signature-help-enable
 remove-hooks global lsp-filetype-.*   # drop kak-lsp's defaults; ours are below
 
 # Extra filetype detection to match Helix's file-types.
-hook global BufCreate .*\.(qmd|livemd|mdx|mkdn|mdwn|mdown|markdn|mdtxt|mdtext|workbook) %{ set-option buffer filetype markdown }
+hook global BufCreate .*\.(qmd|mdx) %{ set-option buffer filetype markdown }
 hook global BufCreate .*/PULLREQ_EDITMSG %{ set-option buffer filetype markdown }
 hook global BufCreate .*\.(ins|Rd|bbx|cbx) %{ set-option buffer filetype latex }
 hook global BufCreate .*\.bib %{
@@ -152,6 +152,7 @@ hook global BufSetOption filetype=fortran %{
             "/Users/easifem/Dropbox/easifem/elasticity/src/**",
             "/Users/easifem/Dropbox/easifem/sdof/src/**",
             "/Users/easifem/.easifem/easifem/src/tomlf/src/**",
+            "/Users/easifem/.easifem/easifem/src/tomlf/src/tomlf/**",
         ]
 
         # Lint rules come from the project's config file (fortitude.toml,
@@ -194,15 +195,26 @@ hook global BufSetOption filetype=json %{
 hook global BufSetOption filetype=toml %{
     set-option buffer lsp_servers %{
         [taplo]
-        root_globs = [".git"]
+        root_globs = [ ".git"]
         args = ["lsp", "stdio"]
         [tombi]
-        root_globs = ["tombi.toml", "pyproject.toml", ".git"]
+        root_globs = [ "tombi.toml", "pyproject.toml", ".git"]
         args = ["lsp"]
     }
 }
 
 # Markdown: no language server (formatting is rumdl's command line, below).
+hook global BufSetOption filetype=markdown %{
+    set-option buffer lsp_servers %{
+        [rumdl]
+        root_globs = [ ".git", ".rumdl.toml", "rumdl.toml", ".marksman.toml"]
+        args = ["server"]
+        [iwes]
+        root_globs = [ ".git", ".iwe", ".marksman.toml"]
+        # args = [""]
+    }
+    set-option -add buffer lsp_servers %opt{lsp_scls}
+}
 
 hook global BufSetOption filetype=latex %{
     set-option buffer lsp_servers %{
