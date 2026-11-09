@@ -7,3 +7,6 @@ kakrc.bak-*
 bin/scls-kak
 # rumdl (markdown linter) cache
 .rumdl_cache/
+# tree-sitter grammar sources and builds (see kak-tree-sitter.toml)
+tree-sitter/grammars/
+tree-sitter/sources/

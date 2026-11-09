@@ -8,7 +8,7 @@ formatters, tree-sitter grammar, theme and space-leader keys.
 ## Features
 
 - **Tree-sitter highlighting** via [kak-tree-sitter](https://sr.ht/~hadronized/kak-tree-sitter/),
-  reusing Helix's grammars and queries for Fortran, TOML, Markdown, CMake and JSON (code blocks
+  with the latest upstream Fortran grammar and Helix's grammars and queries for TOML, Markdown, CMake and JSON (code blocks
   in Markdown are highlighted in their own language).
 - **Soft wrap** at word boundaries for every file type, as in Helix.
 - **Indent guides**, a **green cursor in insert mode** and `gw` jump labels, as in Helix.
@@ -78,8 +78,16 @@ from **fish** (which sets `SNIPPETS_PATH`).
 - Kakoune, plus `cargo install kak-lsp kak-tree-sitter ktsctl`
 - The language servers and formatters in the table above
 - `fd`, `ripgrep`, `fzf`, `bat`, `yazi`, `broot`, `lazygit`, `diffnav`, `jj`, `jjui`, `perl`
+- The Fortran grammar, built from upstream
+  [tree-sitter-fortran](https://github.com/stadelmanma/tree-sitter-fortran) into `tree-sitter/`:
+  ```sh
+  git clone --depth 1 https://github.com/stadelmanma/tree-sitter-fortran tree-sitter/sources/fortran
+  cd tree-sitter/sources/fortran
+  cc -O2 -shared -fPIC -I src src/parser.c src/scanner.c -o ../../grammars/fortran.so
+  ```
+  Its queries are tracked in `tree-sitter/queries/fortran`.
 - Helix with its grammars built (`hx --grammar build`): kak-tree-sitter reads the
-  Fortran, TOML, Markdown and CMake grammars and queries in `~/.config/helix/runtime`, and
+  TOML, Markdown and CMake grammars and queries in `~/.config/helix/runtime`, and
   Markdown's inline grammar and the JSON grammar from the system Helix runtime
   (`/usr/lib/helix/runtime` on Arch, `/opt/homebrew/opt/helix/libexec/runtime` with Homebrew).
 
@@ -101,7 +109,8 @@ kak-tree-sitter, so the patched build wins over the pacman package.
 | Path | What |
 |---|---|
 | `kakrc` | main config |
-| `kak-tree-sitter.toml` | kak-tree-sitter config (Fortran, TOML, Markdown, CMake and JSON grammars from Helix) |
+| `kak-tree-sitter.toml` | kak-tree-sitter config (Fortran from `tree-sitter/`; TOML, Markdown, CMake and JSON grammars from Helix) |
+| `tree-sitter/queries/fortran/` | Fortran queries (from Helix's, fixed for the upstream grammar) |
 | `autoload/fortran.kak` | Fortran filetype and indentation |
 | `colors/gruvbox.kak` | default theme (Helix's gruvbox), including tree-sitter faces |
 | `colors/catppuccin-mocha.kak` | alternative theme, same faces |

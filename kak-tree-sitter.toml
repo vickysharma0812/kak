@@ -10,14 +10,18 @@
 # queries; their faces fall back to ts_keyword, as Helix does.
 groups = ["function.call", "keyword.repeat", "keyword.modifier", "keyword.return"]
 
-# Fortran is not in the KTS defaults. Reuse the grammar and queries that Helix
-# already built from the tree-sitter-fortran fork, so both editors stay in sync.
-# After `helix --grammar build`, nothing needs to be done here.
+# Fortran is not in the KTS defaults. kak has its own grammar and queries in
+# tree-sitter/ (Helix still uses its fork). The grammar is upstream
+# stadelmanma/tree-sitter-fortran master @ 72f8759 (2026-10-27), built by hand:
+#   git -C tree-sitter/sources/fortran pull
+#   cd tree-sitter/sources/fortran && cc -O2 -shared -fPIC -I src \
+#     src/parser.c src/scanner.c -o ../../grammars/fortran.so
+# The queries started as copies of Helix's and were fixed for the new grammar.
 [grammar.fortran.source.local]
-path = "/home/easifem/.config/helix/runtime/grammars/fortran.so"
+path = "/home/easifem/.config/kak/tree-sitter/grammars/fortran.so"
 
 [language.fortran.queries.source.local]
-path = "/home/easifem/.config/helix/runtime/queries/fortran"
+path = "/home/easifem/.config/kak/tree-sitter/queries/fortran"
 
 [language.fortran]
 remove_default_highlighter = true
