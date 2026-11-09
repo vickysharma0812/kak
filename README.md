@@ -17,11 +17,12 @@ formatters, tree-sitter grammar, theme and space-leader keys.
 - **Fortran text objects** from tree-sitter: procedures (`f`), modules and types
   (`t`), do loops (`l`), if / select (`I`) and blocks (`B`), with `<a-i>` / `<a-a>`.
 - **LSP** via [kakoune-lsp](https://github.com/kakoune-lsp/kakoune-lsp), with the same
-  servers as Helix:
+  servers as Helix, except that zfls itself runs gfortran, fortitude and fprettier
+  for Fortran (Helix still uses efm-langserver and the fortitude server):
 
   | Language | Servers | Format on save |
   |---|---|---|
-  | Fortran | zfls, fortitude, efm-langserver (gfortran), scls | fprettier |
+  | Fortran | zfls (with gfortran and fortitude), scls | fprettier (through zfls) |
   | CMake | neocmakelsp, scls | gersemi |
   | TOML | taplo, tombi | taplo |
   | Markdown | none | rumdl (`rumdl fmt`) |
@@ -152,5 +153,7 @@ Step-by-step rebuild instructions for the patched tools are in
 - **Snippet rewriting.** kakoune-lsp cannot expand nested placeholders, VSCode
   variables or regex transforms, so `bin/kak-snippet-flatten` flattens nesting,
   fills in date and file-name variables, and turns transforms into plain mirrors.
-- **Code actions** are only requested on `<space>a`, as in Helix; polling them on
-  every idle made fortitude report errors.
+- **Code actions** are only requested on `<space>a`, as in Helix.
+- **fortitude through zfls** takes its rules from `~/.config/fortitude/fortitude.toml`,
+  which must keep `fix = false`: with fixes on, fortitude prints the fixed
+  source instead of the diagnostics zfls reads.

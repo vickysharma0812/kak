@@ -139,8 +139,7 @@ map global user P '<a-!>$kak_opt_clip_paste<ret>' -docstring 'paste before from 
 # ─── LSP ──────────────────────────────────────────────────────────────────────
 # Same servers as ~/.config/helix/languages.toml.
 evaluate-commands %sh{ kak-lsp }
-# Ask for code actions only on <space>a, like Helix. Polling them on every idle
-# makes fortitude return an error whenever it thinks the file has a syntax error.
+# Ask for code actions only on <space>a, like Helix (no request on every idle).
 set-option global lsp_auto_show_code_actions false
 # Show the signature of the call being typed, like Helix's auto-signature-help.
 lsp-auto-signature-help-enable
@@ -176,12 +175,13 @@ declare-option -hidden str lsp_scls %{
     feature_citations = false
 }
 
+# zfls also runs gfortran (compiler diagnostics), fortitude (lint) and
+# fprettier (formatting, in place of fprettify, which takes the same stdin).
+# fortitude's rules come from ~/.config/fortitude/fortitude.toml, which must
+# keep `fix = false`: with fixes on, fortitude prints the fixed source instead
+# of the diagnostics zfls reads.
 hook global BufSetOption filetype=fortran %{
     set-option buffer lsp_servers %{
-        # gfortran diagnostics via ~/.config/efm-langserver/config.yaml
-        [efm-langserver]
-        root_globs = [".git"]
-
         [zfls]
         root_globs = ["fpm.toml", ".fortls", ".git", "CMakeLists.txt"]
         args = [
@@ -191,6 +191,11 @@ hook global BufSetOption filetype=fortran %{
             "--hover_language", "fortran",
             "--use_signature_help",
             "--incremental_sync",
+            "--prefer_implementation",
+            "--include_dirs",
+            "/home/easifem/Dropbox/easifem/base/src/submodules/include/",
+            "/home/easifem/Dropbox/easifem/classes/src/submodules/include/",
+            "/home/easifem/Dropbox/easifem/elasticity/src/submodules/include/",
             "--recursion_limit", "1000",
             "--source_dirs",
             "/home/easifem/Dropbox/easifem/base/src/**",
@@ -200,30 +205,18 @@ hook global BufSetOption filetype=fortran %{
             "/home/easifem/Dropbox/easifem/elasticity/src/**",
             "/home/easifem/Dropbox/easifem/sdof/src/**",
             "/home/easifem/.easifem/easifem/src/tomlf/src/**",
+            # gfortran, as efm-langserver ran it: modules from the installed
+            # easifem builds, not compiled from source first
+            "--compiler_diagnostics", "gfortran",
+            "--compiler_no_dependencies",
+            "--compiler_args=-cpp -Wall -Wunused-variable -Wunused-dummy-argument -Wno-c-binding-type -Wno-missing-include-dirs -DDEBUG_VER -DUSE_SuperLU -DUSE_LUA -I/home/easifem/.easifem/easifem/build/base/include/ -I/home/easifem/.easifem/easifem/build/classes/include/ -I/home/easifem/.easifem/easifem/build/diffusion/include/ -I/home/easifem/.easifem/easifem/build/seepage/include/ -I/home/easifem/.easifem/easifem/build/oneDimElasticity/include/ -I/home/easifem/.easifem/easifem/build/elasticity/include/ -I/home/easifem/.easifem/easifem/build/sdof/include/ -I/home/easifem/.easifem/easifem/install/tomlf/include/toml-f/modules/ -I/home/easifem/.easifem/easifem/install/lapack95/include/",
+            "--fortitude",
+            "--formatter", "fprettify",
+            "--formatter_path", "/home/easifem/.cargo/bin/fprettier",
+            "--formatter_args=--config=/home/easifem/.config/fprettier/fprettier.toml",
         ]
     }
-    evaluate-commands %sh{
-        [ "$kak_opt_fortitude_server" = true ] && echo 'set-option -add buffer lsp_servers %opt{lsp_fortitude}'
-    }
     set-option -add buffer lsp_servers %opt{lsp_scls}
-}
-
-# Lint rules come from the project's config file (fortitude.toml,
-# .fortitude.toml, [extra.fortitude] in fpm.toml, or pyproject.toml);
-# projects without one get fortitude's defaults.
-declare-option -hidden str lsp_fortitude %{
-    [fortitude]
-    root_globs = ["fortitude.toml", ".fortitude.toml", "fpm.toml", ".git", "CMakeLists.txt"]
-    args = ["server"]
-    settings_section = "_"
-    [fortitude.settings._.settings]
-    configurationPreference = "filesystemFirst"
-}
-# Only use fortitude if it has a language server (`fortitude server`, newer
-# releases). An old fortitude exits at once, and that takes kak-lsp down with
-# it: no completion, snippets or diagnostics from any server.
-declare-option -hidden bool fortitude_server %sh{
-    if fortitude server --help >/dev/null 2>&1; then echo true; else echo false; fi
 }
 
 hook global BufSetOption filetype=cmake %{
@@ -444,9 +437,7 @@ map global insert <tab> '<a-;>:snippet-next<ret>' \
 # `format-smart` picks whichever applies; it runs on save and on <space>=.
 declare-option str lsp_format_server ''
 
-hook global WinSetOption filetype=fortran %{
-    set-option window formatcmd 'fprettier --config=/home/easifem/.config/fprettier/fprettier.toml'
-}
+hook global WinSetOption filetype=fortran %{ set-option window lsp_format_server zfls }
 hook global WinSetOption filetype=cmake %{
     set-option window formatcmd 'gersemi --quiet -'
 }
