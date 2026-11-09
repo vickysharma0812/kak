@@ -65,3 +65,18 @@ path = "/home/easifem/.config/helix/runtime/grammars/cmake.so"
 
 [language.cmake.queries.source.local]
 path = "/home/easifem/.config/helix/runtime/queries/cmake"
+
+# Fish and YAML: ~/.config/helix/runtime builds neither, so use the system
+# Helix runtime (/usr/lib/helix), as for JSON. YAML also highlights the
+# `---` front matter of Markdown files (the Markdown queries inject it).
+[grammar.fish.source.local]
+path = "/usr/lib/helix/runtime/grammars/fish.so"
+
+[language.fish.queries.source.local]
+path = "/usr/lib/helix/runtime/queries/fish"
+
+[grammar.yaml.source.local]
+path = "/usr/lib/helix/runtime/grammars/yaml.so"
+
+[language.yaml.queries.source.local]
+path = "/usr/lib/helix/runtime/queries/yaml"
