@@ -26,6 +26,15 @@ evaluate-commands %sh{
         --with-highlighting --with-text-objects
 }
 
+# FIFO buffers (kak-lsp's *hover*) get their filetype while still empty, so KTS
+# parses nothing and, without key presses there, never re-parses. Re-parse once
+# the FIFO is done so hover docs get Markdown + Fortran highlighting.
+hook global BufCloseFifo .* %{
+    evaluate-commands %sh{
+        [ -n "$kak_opt_tree_sitter_lang" ] && echo tree-sitter-buffer-update
+    }
+}
+
 # Themes in colors/: gruvbox (as Helix) or catppuccin-mocha. Switch for the
 # session with :colorscheme <name>, or change the line below to keep it.
 colorscheme gruvbox
