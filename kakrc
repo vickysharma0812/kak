@@ -205,8 +205,6 @@ hook global BufSetOption filetype=fortran %{
             "/home/easifem/Dropbox/easifem/elasticity/src/**",
             "/home/easifem/Dropbox/easifem/sdof/src/**",
             "/home/easifem/.easifem/easifem/src/tomlf/src/**",
-            # gfortran, as efm-langserver ran it: modules from the installed
-            # easifem builds, not compiled from source first
             "--compiler_diagnostics", "gfortran",
             "--compiler_no_dependencies",
             "--compiler_args=-cpp -Wall -Wunused-variable -Wunused-dummy-argument -Wno-c-binding-type -Wno-missing-include-dirs -DDEBUG_VER -DUSE_SuperLU -DUSE_LUA -I/home/easifem/.easifem/easifem/build/base/include/ -I/home/easifem/.easifem/easifem/build/classes/include/ -I/home/easifem/.easifem/easifem/build/diffusion/include/ -I/home/easifem/.easifem/easifem/build/seepage/include/ -I/home/easifem/.easifem/easifem/build/oneDimElasticity/include/ -I/home/easifem/.easifem/easifem/build/elasticity/include/ -I/home/easifem/.easifem/easifem/build/sdof/include/ -I/home/easifem/.easifem/easifem/install/tomlf/include/toml-f/modules/ -I/home/easifem/.easifem/easifem/install/lapack95/include/",
