@@ -312,6 +312,30 @@ hook global WinCreate \*symbols\* %{ set-option window lsp_fail_if_disabled nop 
 
 set-option global lsp_hover_max_info_lines 30
 
+# easidoc: toggle a docs pane, a tmux split to the right running a second
+# client named "docs" that shows the *hover* buffer for the cursor as it moves
+# (scrollable and highlighted, unlike the <space>k popup). Closing the pane by
+# hand also turns auto-hover off.
+define-command easidoc -docstring 'easidoc: toggle a docs pane (tmux split) with hover info for the cursor' %{
+    evaluate-commands %sh{
+        case " $kak_client_list " in
+            *" docs "*) echo 'evaluate-commands -client docs quit' ;;
+            *)          echo 'easidoc-open' ;;
+        esac
+    }
+}
+
+define-command -hidden easidoc-open %{
+    set-option global docsclient docs
+    # -d keeps the focus in this pane.
+    tmux-terminal-impl 'split-window -h -d -l 45%' kak -c %val{session} -e 'rename-client docs'
+    lsp-auto-hover-buffer-enable
+    hook -once -group easidoc global ClientClose docs %{
+        lsp-auto-hover-buffer-disable
+        set-option global docsclient ''
+    }
+}
+
 map global user l ':enter-user-mode lsp<ret>'           -docstring 'LSP mode'
 map global user k ':lsp-hover<ret>'                     -docstring 'hover'
 map global user a ':lsp-code-actions<ret>'              -docstring 'code action'
@@ -882,8 +906,8 @@ define-command easifem-run-test -docstring 'easifem run on this file' %{
 }
 
 map global user c ':comment-line<ret>' -docstring 'comment lines'
-map global user g ':lazygit<ret>'      -docstring 'lazygit'
-map global user G ':diffnav<ret>'      -docstring 'diffnav: uncommitted changes'
+# map global user g ':lazygit<ret>'      -docstring 'lazygit'
+# map global user G ':diffnav<ret>'      -docstring 'diffnav: uncommitted changes'
 map global user j ':jjui<ret>'         -docstring 'jjui'
 map global user J ':jjdiff<ret>'       -docstring 'jjdiff: working-copy change'
 declare-user-mode easifem
