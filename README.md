@@ -63,7 +63,7 @@ formatters, tree-sitter grammar, theme and space-leader keys.
 | `<space>=` | format | `<space>c` | comment lines |
 | `<space>t` | tree-sitter menu | `<a-up>` / `<a-down>` | select parent / child node |
 | `<space>g` / `<space>G` | lazygit / diffnav | `<space>+` | easifem background build (`b`, `c`), its errors (`e`, `n`, `p`) and log (`l`), run test (`+`), split `use ..., only:` lists (`u`) |
-| `<space>j` / `<space>J` | jjui / jjdiff | | |
+| `<space>j` / `<space>J` | jjui / jjdiff | `<space>w` | tmux panes: `h` `j` `k` `l` move, `v` / `s` split, `q` close; also `:vertical-split` and `:horizontal-split [file]` |
 | `<space>p` / `<space>P` | paste from clipboard | `mm` | matching bracket |
 | `gw` | jump to a word by its label | | |
 | `ms` / `mr` / `md` | surround add / replace / delete | `mi` / `ma` | select inside / around |

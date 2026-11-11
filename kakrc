@@ -12,6 +12,8 @@
 #   <space>l  all LSP cmds (l s goto symbol, l S symbol list)
 #   <space>g  lazygit        <space>G  diffnav         <space>+  easifem build/test
 #   <space>j  jjui           <space>J  jjdiff
+#   <space>w  tmux panes (h/j/k/l move, v/s split, q close)
+#   :vertical-split / :horizontal-split [file]  new client in a tmux split
 #   gd / gr / gy             definition / references / type definition
 #   m         match / surround (mm ms mr md mi ma), as in Helix
 #   gw        jump to a word by its two-letter label, as in Helix
@@ -660,6 +662,49 @@ map global buffer Q ':delete-buffer!<ret>'          -docstring 'close, discard c
 map global buffer o ':delete-other-buffers<ret>'    -docstring 'close others'
 map global buffer w ':write<ret>'                   -docstring 'write'
 map global buffer W ':write-all<ret>'               -docstring 'write all'
+
+# ─── tmux panes ───────────────────────────────────────────────────────────────
+# :vertical-split / :horizontal-split [file] split this client's tmux pane and
+# open a new client of this session there, on the same buffer and selection
+# (or on <file>). Vim's naming: a vertical split puts the panes side by side.
+# <space>w h/j/k/l moves to the tmux pane left/down/up/right.
+declare-option -hidden str split_buffer
+declare-option -hidden str split_selection
+define-command -hidden -params 1..2 split-impl %{
+    set-option global split_buffer %val{bufname}
+    set-option global split_selection %val{selection_desc}
+    # The new client runs its -e commands once it connects, reading these options.
+    evaluate-commands %sh{
+        if [ $# -eq 2 ]; then
+            printf "set-option global split_buffer '%s'\n" "$(printf %s "$2" | sed "s/'/''/g")"
+            printf "tmux-terminal-impl '%s' kak -c %s -e 'edit %%opt{split_buffer}'\n" "$1" "$kak_session"
+        else
+            printf "tmux-terminal-impl '%s' kak -c %s -e 'buffer %%opt{split_buffer}; select %%opt{split_selection}'\n" "$1" "$kak_session"
+        fi
+    }
+}
+define-command vertical-split -params ..1 -file-completion -docstring 'vertical-split [<file>]: split the tmux pane side by side, new client on this buffer (or <file>)' %{
+    split-impl 'split-window -h' %arg{@}
+}
+define-command horizontal-split -params ..1 -file-completion -docstring 'horizontal-split [<file>]: split the tmux pane top/bottom, new client on this buffer (or <file>)' %{
+    split-impl 'split-window -v' %arg{@}
+}
+
+define-command -hidden -params 1 tmux-select-pane %{
+    nop %sh{
+        [ -n "$kak_client_env_TMUX" ] || exit
+        TMUX=$kak_client_env_TMUX tmux select-pane -t "$kak_client_env_TMUX_PANE" "$1"
+    }
+}
+declare-user-mode pane
+map global user w ':enter-user-mode pane<ret>'      -docstring 'tmux pane mode'
+map global pane h ':tmux-select-pane -L<ret>'       -docstring 'pane left'
+map global pane j ':tmux-select-pane -D<ret>'       -docstring 'pane down'
+map global pane k ':tmux-select-pane -U<ret>'       -docstring 'pane up'
+map global pane l ':tmux-select-pane -R<ret>'       -docstring 'pane right'
+map global pane v ':vertical-split<ret>'            -docstring 'split side by side'
+map global pane s ':horizontal-split<ret>'          -docstring 'split top/bottom'
+map global pane q ':quit<ret>'                      -docstring 'close this client (pane)'
 
 # ─── tree-sitter keys ─────────────────────────────────────────────────────────
 # <space>t opens the KTS menu: f/a/t/c = search function/parameter/type/comment,
