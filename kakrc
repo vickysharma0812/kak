@@ -10,7 +10,7 @@
 #   <space>a  code action    <space>r  rename          <space>k  hover
 #   <space>=  format         <space>c  comment         <space>t  tree-sitter
 #   <space>l  all LSP cmds (l s goto symbol, l S symbol list)
-#   <space>g  lazygit        <space>G  diffnav         <space>+  easifem build/test
+#   <space>g  lazygit        <space>G  tuicr         <space>+  easifem build/test
 #   <space>j  jjui           <space>J  jjdiff
 #   <space>w  tmux panes (h/j/k/l move, v/s split, q close)
 #   :vertical-split / :horizontal-split [file]  new client in a tmux split
@@ -805,9 +805,10 @@ define-command jjui -docstring 'jjui in a popup, in the jj repository of the cur
     }
 }
 
-# The working-copy change by default; any `jj diff` arguments work too:
-# :jjdiff -r xyz, :jjdiff --from main --to @
-define-command jjdiff -params .. -docstring 'jjdiff [<jj diff args>]: browse a jj diff in a popup (default: the working-copy change)' %{
+# Review a jj diff in tuicr (it reads the jj repo itself). The working-copy
+# change by default (tuicr -w); any tuicr arguments work too, with jj revsets:
+# :jjdiff -r xyz, :jjdiff -r main..@, :jjdiff -r @- -p src
+define-command jjdiff -params .. -docstring 'jjdiff [<tuicr args>]: review a jj diff in tuicr in a popup (default: the working-copy change)' %{
     evaluate-commands %sh{
         if [ -f "$kak_buffile" ]; then dir=${kak_buffile%/*}; else dir=$PWD; fi
         root=$(cd "$dir" 2>/dev/null && jj root 2>/dev/null)
@@ -816,19 +817,43 @@ define-command jjdiff -params .. -docstring 'jjdiff [<jj diff args>]: browse a j
             exit
         fi
         cd "$root" || exit
-        if ! changed=$(jj diff --name-only "$@" 2>/dev/null); then
-            echo "fail 'jjdiff: jj diff failed (a bad revision?)'"
-            exit
+        if [ $# -eq 0 ]; then
+            if [ -z "$(jj diff --name-only 2>/dev/null)" ]; then
+                echo "echo 'jjdiff: no changes in the working copy'"
+                exit
+            fi
+            set -- -w
         fi
-        if [ -z "$changed" ]; then
-            echo "echo 'jjdiff: no changes'"
-            exit
-        fi
-        printf "popup sh -c 'cd \"\$1\" && shift && jj --no-pager diff --git \"\$@\" | diffnav' jjdiff '%s'" \
-            "$(printf %s "$root" | sed "s/'/''/g")"
+        printf "tuicr-popup '%s'" "$(printf %s "$root" | sed "s/'/''/g")"
         for a; do printf " '%s'" "$(printf %s "$a" | sed "s/'/''/g")"; done
         echo
     }
+}
+
+# tuicr in the git or jj repository of the current file. With no arguments it
+# opens tuicr's commit picker (uncommitted changes and recent commits); any
+# tuicr arguments work too: :tuicr -w, :tuicr -r HEAD~3..HEAD
+define-command tuicr -params .. -docstring 'tuicr [<tuicr args>]: review changes in tuicr in a popup (default: pick commits)' %{
+    evaluate-commands %sh{
+        if [ -f "$kak_buffile" ]; then dir=${kak_buffile%/*}; else dir=$PWD; fi
+        root=$(cd "$dir" 2>/dev/null && { git rev-parse --show-toplevel 2>/dev/null || jj root 2>/dev/null; })
+        if [ -z "$root" ]; then
+            echo "fail 'tuicr: not in a git or jj repository'"
+            exit
+        fi
+        printf "tuicr-popup '%s'" "$(printf %s "$root" | sed "s/'/''/g")"
+        for a; do printf " '%s'" "$(printf %s "$a" | sed "s/'/''/g")"; done
+        echo
+    }
+}
+
+# tuicr-popup <repo root> [<tuicr args>]. On failure (a bad revset, say) the
+# popup stays open to show the error. tuicr can open files in an editor, so
+# the diff gutter is refreshed after.
+define-command -hidden -params 1.. tuicr-popup %{
+    popup sh -c %sh{
+        printf 'cd "$1" && shift && { tuicr --no-update-check "$@" || { printf "\\nPress Enter..."; read -r _; }; }; echo "evaluate-commands -client %s git-refresh" | kak -p %s' "$kak_client" "$kak_session"
+    } tuicr %arg{@}
 }
 
 # Uncommitted changes (staged and not) by default; any `git diff` arguments
@@ -952,9 +977,9 @@ define-command easifem-run-test -docstring 'easifem run on this file' %{
 
 map global user c ':comment-line<ret>' -docstring 'comment lines'
 # map global user g ':lazygit<ret>'      -docstring 'lazygit'
-# map global user G ':diffnav<ret>'      -docstring 'diffnav: uncommitted changes'
+map global user G ':tuicr<ret>'        -docstring 'tuicr: review changes (pick commits)'
 map global user j ':jjui<ret>'         -docstring 'jjui'
-map global user J ':jjdiff<ret>'       -docstring 'jjdiff: working-copy change'
+map global user J ':jjdiff<ret>'       -docstring 'jjdiff: review the working-copy change in tuicr'
 declare-user-mode easifem
 map global user    + ':enter-user-mode easifem<ret>'   -docstring 'easifem build/test'
 map global easifem b ':easifem-build-base<ret>'        -docstring 'build base'

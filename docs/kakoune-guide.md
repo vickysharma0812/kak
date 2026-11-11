@@ -410,11 +410,11 @@ shows the branch, or in a jj repository the change id and nearest bookmarks.
 | Key | Action |
 |---|---|
 | `<space>g` | lazygit (commit, push, branches) |
-| `<space>G` | diffnav: browse all uncommitted changes (staged and not) with a file tree; `q` closes |
+| `<space>G` | tuicr: pick commits (or the uncommitted changes) to review, in the git or jj repository of the current file; `:tuicr -w`, `:tuicr -r HEAD~3..HEAD` take any tuicr arguments |
 | `<space>j` | jjui, in the jj repository of the current file; commit messages open in `kak` |
-| `<space>J` | jjdiff: browse the working-copy change in diffnav; `:jjdiff -r xyz` takes any `jj diff` arguments |
+| `<space>J` | jjdiff: review the working-copy change in tuicr; `:jjdiff -r <revset>` (e.g. `-r @-`, `-r main..@`) takes any tuicr arguments |
 
-`:diffnav` takes any `git diff` arguments, for other diffs: `:diffnav --cached`
+`:diffnav` (no key) takes any `git diff` arguments, for other diffs: `:diffnav --cached`
 (staged only), `:diffnav main` (against a branch), `:diffnav HEAD~3 -- src`.
 It shows saved changes only, and new untracked files are not in `git diff`
 until you `git add` them. In diffnav, `e` toggles the file tree and `/` searches.

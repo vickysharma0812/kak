@@ -62,8 +62,8 @@ formatters, tree-sitter grammar, theme and space-leader keys.
 | `gd` / `gr` / `gy` | definition / references / type definition | `<space>l` | all LSP commands (`s` goto symbol, `S` symbol list) |
 | `<space>=` | format | `<space>c` | comment lines |
 | `<space>t` | tree-sitter menu | `<a-up>` / `<a-down>` | select parent / child node |
-| `<space>g` / `<space>G` | lazygit / diffnav | `<space>+` | easifem background build (`b`, `c`), its errors (`e`, `n`, `p`) and log (`l`), run test (`+`), split `use ..., only:` lists (`u`) |
-| `<space>j` / `<space>J` | jjui / jjdiff | `<space>w` | tmux panes: `h` `j` `k` `l` move, `v` / `s` split, `q` close; also `:vertical-split` and `:horizontal-split [file]` |
+| `<space>g` / `<space>G` | lazygit / tuicr (pick commits to review; `:tuicr` takes tuicr arguments) | `<space>+` | easifem background build (`b`, `c`), its errors (`e`, `n`, `p`) and log (`l`), run test (`+`), split `use ..., only:` lists (`u`) |
+| `<space>j` / `<space>J` | jjui / jjdiff (tuicr review of the working-copy change; `:jjdiff -r <revset>` for others) | `<space>w` | tmux panes: `h` `j` `k` `l` move, `v` / `s` split, `q` close; also `:vertical-split` and `:horizontal-split [file]` |
 | `<space>p` / `<space>P` | paste from clipboard | `mm` | matching bracket |
 | `gw` | jump to a word by its label | | |
 | `ms` / `mr` / `md` | surround add / replace / delete | `mi` / `ma` | select inside / around |
@@ -78,7 +78,7 @@ from **fish** (which sets `SNIPPETS_PATH`).
 
 - Kakoune, plus `cargo install kak-lsp kak-tree-sitter ktsctl`
 - The language servers and formatters in the table above
-- `fd`, `ripgrep`, `fzf`, `bat`, `yazi`, `broot`, `lazygit`, `diffnav`, `jj`, `jjui`, `perl`
+- `fd`, `ripgrep`, `fzf`, `bat`, `yazi`, `broot`, `lazygit`, `diffnav`, `jj`, `jjui`, `tuicr`, `perl`
 - The Fortran grammar, built from upstream
   [tree-sitter-fortran](https://github.com/stadelmanma/tree-sitter-fortran) into `tree-sitter/`:
   ```sh
