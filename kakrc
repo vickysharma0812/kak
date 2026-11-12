@@ -10,7 +10,8 @@
 #   <space>a  code action    <space>r  rename          <space>k  hover
 #   <space>=  format         <space>c  comment         <space>t  tree-sitter
 #   <space>l  all LSP cmds (l s goto symbol, l S symbol list)
-#   <space>g  lazygit        <space>G  diffnav         <space>+  easifem build/test
+#   <space>j  jjui           <space>J  jjdiff          <space>g  tuicr
+#   <space>G  tuicrdiff (uncommitted)          <space>+  easifem build/test
 #   gd / gr / gy             definition / references / type definition
 #   m         match / surround (mm ms mr md mi ma), as in Helix
 #   gw        jump to a word by its two-letter label, as in Helix
@@ -639,6 +640,13 @@ define-command lazygit -docstring 'lazygit in a popup' %{
     }
 }
 
+define-command jjui -docstring 'jjui (Jujutsu TUI) in a popup' %{
+    # in a colocated repo jj moves git's HEAD too, so refresh like lazygit
+    popup sh -c %sh{
+        printf 'jjui; echo "evaluate-commands -client %s git-refresh" | kak -p %s' "$kak_client" "$kak_session"
+    }
+}
+
 # Uncommitted changes (staged and not) by default; any `git diff` arguments
 # work too: :diffnav --cached, :diffnav main, :diffnav HEAD~3 -- src
 define-command diffnav -params .. -docstring 'diffnav [<git diff args>]: browse a diff in a popup (default: git diff HEAD)' %{
@@ -651,6 +659,41 @@ define-command diffnav -params .. -docstring 'diffnav [<git diff args>]: browse 
             *) echo "fail 'diffnav: git diff failed (not a repository, or a bad revision?)'"; exit ;;
         esac
         printf "popup sh -c 'git --no-pager diff \"\$@\" | diffnav' diffnav"
+        for a; do printf " '%s'" "$(printf %s "$a" | sed "s/'/''/g")"; done
+        echo
+    }
+}
+
+# The same for Jujutsu: the working-copy change (@) by default; any `jj diff`
+# arguments work too: :jjdiff -r @-, :jjdiff --from main, :jjdiff -r @ src
+define-command jjdiff -params .. -docstring 'jjdiff [<jj diff args>]: browse a jj diff in diffnav (default: jj diff, i.e. @)' %{
+    evaluate-commands %sh{
+        if ! out=$(jj diff --git --color=never "$@" 2>/dev/null); then
+            echo "fail 'jjdiff: jj diff failed (not a jj repository, or a bad revision?)'"; exit
+        fi
+        [ -z "$out" ] && { echo "echo 'jjdiff: no changes'"; exit; }
+        printf "popup sh -c 'jj diff --git --color=never \"\$@\" | diffnav' jjdiff"
+        for a; do printf " '%s'" "$(printf %s "$a" | sed "s/'/''/g")"; done
+        echo
+    }
+}
+
+# tuicr as is: its commit selector (arguments passed through, e.g. :tuicr -r @-)
+define-command tuicr -params .. -docstring 'tuicr [<tuicr args>]: code review TUI in a popup (commit selector)' %{
+    evaluate-commands %sh{
+        printf "popup tuicr"
+        for a; do printf " '%s'" "$(printf %s "$a" | sed "s/'/''/g")"; done
+        echo
+    }
+}
+
+# Review a diff in tuicr (comments are exported to the clipboard). Uncommitted
+# changes by default (tuicr -w); any tuicr arguments replace that:
+# :tuicrdiff -r main..HEAD, :tuicrdiff -w -p src
+define-command tuicrdiff -params .. -docstring 'tuicrdiff [<tuicr args>]: review a diff in tuicr (default: tuicr -w, uncommitted changes)' %{
+    evaluate-commands %sh{
+        [ $# -eq 0 ] && set -- -w
+        printf "popup tuicr"
         for a; do printf " '%s'" "$(printf %s "$a" | sed "s/'/''/g")"; done
         echo
     }
@@ -763,8 +806,10 @@ define-command easifem-run-test -docstring 'easifem run on this file' %{
 }
 
 map global user c ':comment-line<ret>' -docstring 'comment lines'
-map global user g ':lazygit<ret>'      -docstring 'lazygit'
-map global user G ':diffnav<ret>'      -docstring 'diffnav: uncommitted changes'
+map global user j ':jjui<ret>'         -docstring 'jjui'
+map global user J ':jjdiff<ret>'       -docstring 'jjdiff: working-copy change'
+map global user g ':tuicr<ret>'        -docstring 'tuicr: pick commits to review'
+map global user G ':tuicrdiff<ret>'    -docstring 'tuicrdiff: review uncommitted changes'
 declare-user-mode easifem
 map global user    + ':enter-user-mode easifem<ret>'   -docstring 'easifem build/test'
 map global easifem b ':easifem-build-base<ret>'        -docstring 'build base'
@@ -965,7 +1010,7 @@ hook global BufCreate .* %{ set-option buffer modeline_bufname %sh{ printf %s "$
 
 # Git branch of the file's directory (short commit when detached), like Helix's
 # version-control element. One git call when a buffer is shown, when the terminal
-# regains focus, and after lazygit closes.
+# regains focus, and after lazygit or jjui closes.
 declare-option -hidden str modeline_branch
 define-command -hidden modeline-update-branch %{
     set-option buffer modeline_branch %sh{

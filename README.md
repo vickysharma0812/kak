@@ -40,6 +40,9 @@ formatters, tree-sitter grammar, theme and space-leader keys.
 - **Helix-like completion**: `<tab>`/`<s-tab>` or `<down>`/`<up>` move through the menu, `<ret>` accepts.
 - **Git signs**: added / changed / deleted line marks (like gitsigns), hunk jumps,
   stage / revert selected lines and blame, using Kakoune's built-in `git` command.
+- **Git, jj and review TUIs** in popups: jjui and `jj diff` in diffnav (`<space>j`, `<space>J`),
+  tuicr code review (`<space>g`; `<space>G` for uncommitted changes), plus `:lazygit` and
+  `:diffnav [<git diff args>]`.
 - Gruvbox dark theme, matching Ghostty, tmux and fzf (Catppuccin Mocha kept as an
   alternative: `:colorscheme catppuccin-mocha`), drawn on the terminal's own background
   so Ghostty's `background-opacity` shows through, and a Helix-style modeline
@@ -61,11 +64,13 @@ formatters, tree-sitter grammar, theme and space-leader keys.
 | `gd` / `gr` / `gy` | definition / references / type definition | `<space>l` | all LSP commands (`s` goto symbol, `S` symbol list) |
 | `<space>=` | format | `<space>c` | comment lines |
 | `<space>t` | tree-sitter menu | `<a-up>` / `<a-down>` | select parent / child node |
-| `<space>g` / `<space>G` | lazygit / diffnav | `<space>+` | easifem background build (`b`, `c`), its errors (`e`, `n`, `p`) and log (`l`), run test (`+`), split `use ..., only:` lists (`u`) |
-| `<space>h` | git: next/prev change, stage, revert, blame | | |
+| `<space>j` / `<space>J` | jjui / jjdiff (`jj diff` in diffnav) | `<space>g` / `<space>G` | tuicr (pick commits to review) / tuicrdiff (review uncommitted changes) |
+| `<space>h` | git: next/prev change, stage, revert, blame | `<space>+` | easifem background build (`b`, `c`), its errors (`e`, `n`, `p`) and log (`l`), run test (`+`), split `use ..., only:` lists (`u`) |
 | `<space>p` / `<space>P` | paste from clipboard | `mm` | matching bracket |
 | `gw` | jump to a word by its label | | |
 | `ms` / `mr` / `md` | surround add / replace / delete | `mi` / `ma` | select inside / around |
+
+`:lazygit` and `:diffnav` have no key; run them as commands.
 
 In insert mode: `<tab>`/`<s-tab>` or `<down>`/`<up>` move through the completion menu, `<ret>` accepts
 the picked item, and `<tab>` with no menu open jumps to the next snippet placeholder.
@@ -77,7 +82,7 @@ tmux popups or Rex floating panes, chosen per client) and started from **fish** 
 
 - Kakoune, plus `cargo install kak-lsp kak-tree-sitter ktsctl`
 - The language servers and formatters in the table above
-- `fd`, `ripgrep`, `television` (`tv`), `fzf`, `bat`, `yazi`, `broot`, `lazygit`, `diffnav`, `perl`, and `jq` under Rex
+- `fd`, `ripgrep`, `television` (`tv`), `fzf`, `bat`, `yazi`, `broot`, `lazygit`, `diffnav`, `jjui`, `tuicr`, `perl`, and `jq` under Rex
 - Helix with its grammars built (`hx --grammar build`): kak-tree-sitter reads the
   TOML, Markdown and CMake grammars and queries in `~/.config/helix/runtime`, and
   Markdown's inline grammar and the JSON grammar from Homebrew's Helix (`/opt/homebrew/opt/helix`).

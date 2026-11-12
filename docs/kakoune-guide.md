@@ -401,7 +401,7 @@ Files in a git repo get marks next to the line numbers, like gitsigns or Helix's
 diff gutter: **green** added, **blue** changed, **red** `_` / `‾` deleted lines.
 They compare the buffer with what is **staged**, so staging a change clears its
 marks. They update when the file is shown, after `<esc>` from insert mode, on
-save, when you return to the terminal, and when lazygit closes. The status line
+save, when you return to the terminal, and when lazygit or jjui closes. The status line
 shows the branch.
 
 `<space>h` opens the git menu:
@@ -415,8 +415,6 @@ shows the branch.
 | `<space>h` `b` | toggle blame; `<ret>` on a line shows its commit |
 | `<space>h` `d` | diff of this file in a buffer |
 | `<space>h` `h` / `g` | hide / show the marks |
-| `<space>g` | lazygit (commit, push, branches) |
-| `<space>G` | diffnav: browse all uncommitted changes (staged and not) with a file tree; `q` closes |
 
 Revert changes the file on disk and reloads it, so it refuses while the buffer
 has unsaved edits (`:w` first). Check the selection before pressing `r`.
@@ -425,6 +423,38 @@ has unsaved edits (`:w` first). Check the selection before pressing `r`.
 (staged only), `:diffnav main` (against a branch), `:diffnav HEAD~3 -- src`.
 It shows saved changes only, and new untracked files are not in `git diff`
 until you `git add` them. In diffnav, `e` toggles the file tree and `/` searches.
+
+`:lazygit` (commit, push, branches) and `:diffnav` have no key; type them as
+commands.
+
+### Jujutsu (jj)
+
+For repos that use [jj](https://jj-vcs.github.io/jj/) (after `jj git init`):
+
+| Key | Action |
+|---|---|
+| `<space>j` | jjui: log, describe, squash, rebase, push; the branch and marks refresh when it closes |
+| `<space>J` | jjdiff: the working-copy change (`@`) in diffnav; `q` closes |
+
+`:jjdiff` takes any `jj diff` arguments: `:jjdiff -r @-` (the parent change),
+`:jjdiff --from main`, `:jjdiff -r @ src`. Outside a jj repo it says so in the
+status line.
+
+### Code review (tuicr)
+
+[tuicr](https://tuicr.dev/) shows a diff for review with vim keys:
+comment on lines, then export the review (to the clipboard by default; paste
+it with `<space>p`). It works in git and jj repos.
+
+| Key | Action |
+|---|---|
+| `<space>g` | tuicr: pick the commits to review first |
+| `<space>G` | tuicrdiff: review the uncommitted changes straight away (`tuicr -w`) |
+
+Both take tuicr's arguments. `:tuicr -r @-` reviews one change; with
+`:tuicrdiff` the arguments replace `-w`: `:tuicrdiff -r main..HEAD`,
+`:tuicrdiff -w -p src` (uncommitted changes under `src` only). Press `?` in
+tuicr for its keys.
 
 ## easifem
 
@@ -438,7 +468,6 @@ until you `git add` them. In diffnav, `e` toggles the file tree and `/` searches
 | `<space>+` `u` or `:split-use` | split `use ..., only: a, b` into one import per line: in the selected lines, or the whole buffer when nothing is selected |
 | `:easifem-install <pkg>` | install a package **in the background**, without building first; `<tab>` completes the package names |
 | `:easifem-build-log <pkg>` | open that package's log (`:easifem-build-errors` takes the same) |
-| `<space>g` | lazygit |
 
 Builds run `easifem dev <pkg> --verbose && easifem install <pkg> --no-download --verbose`,
 and `:easifem-install` runs only `easifem install <pkg> --no-download --verbose`,
@@ -619,6 +648,10 @@ Then restart Kakoune (each session starts its own kak-lsp).
   not while typing
 - **No Fortran, TOML, Markdown, CMake or JSON highlighting**: restart the tree-sitter server, then
   restart Kakoune: `kill (cat $TMPDIR/kak-tree-sitter/pid)`
+- **No Fortran highlighting only**: Fortran uses its own grammar,
+  `tree-sitter/grammars/fortran.so`, which is not in the repo; it must be built
+  locally from the tree-sitter-fortran source. Its queries are in
+  `tree-sitter/queries/fortran` (Helix's, adapted to the newer grammar)
 - **No snippets**: start Kakoune from fish (it sets `SNIPPETS_PATH`), and check
   that `bin/scls-kak` exists; see [Patched tools](#scls)
 - **Pickers do nothing**: Kakoune must run inside tmux or Rex (Rex also needs
