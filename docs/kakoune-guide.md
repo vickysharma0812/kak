@@ -15,7 +15,7 @@ Don't try to learn every table at once. Go in stages, and do the
    [Movement](#movement), `d` `c` `y` `p` `u` from [Editing](#editing), `:w` `:q`.
    Read [Coming from Helix](#coming-from-helix): most of your Helix habits work.
 2. **Day 3–5: select like Kakoune.** `x` (and `xxx`), objects (`<a-i>` / `<a-a>`),
-   `f` / `t`, search. Use `<space>f`, `<space>s` (jump to a procedure by name),
+   `f` / `t`, search. Use `<space>E` (find a file), `<space>s` (jump to a procedure by name),
    `gw` (jump to a word on screen) and `gd` instead of scrolling.
 3. **Week 2: multiple selections.** `%`, `s`, `S`, `<a-s>`, `<a-k>`, `&`, `C`.
    This is where Kakoune pays off: [Recipes](#recipes-for-fortran) are all built
@@ -312,9 +312,10 @@ Registers worth knowing: `"` last yank/delete, `/` last search, `@` last macro,
 
 | Key | Action |
 |---|---|
-| `<space>f` | find a file |
+| `<space>E` | find a file (tv / fzf) |
 | `<space>e` | yazi: pick a file, `<ret>` opens it in this session (bulk rename, `r` on selected files, edits the names in your `$EDITOR`) |
-| `<space>E` | broot in the project (git) root: type to filter the tree, `<ret>` on a file opens it (on a folder, enters it); `<esc>` goes back / quits. `:broot-here` does the same in the current file's directory |
+| `<space>f` | broot in the project (git) root: type to filter the tree, `<ret>` on a file opens it (on a folder, enters it); `<esc>` goes back / quits |
+| `<space>F` | broot in the current file's directory (`:broot-here`), the same keys |
 | `<space>,` | pick an open buffer |
 | `<space>'` | reopen the last picker with the text you had typed (also after `<esc>`) |
 | `ctrl-t` (in a picker) | show / hide the preview, as in Helix (fzf; tv uses its own keys) |
@@ -656,5 +657,5 @@ Then restart Kakoune (each session starts its own kak-lsp).
   that `bin/scls-kak` exists; see [Patched tools](#scls)
 - **Pickers do nothing**: Kakoune must run inside tmux or Rex (Rex also needs
   `jq`); a popup that cannot open says why in the status line
-- **`<space>E` (broot) opens nothing**: `<ret>` must be on a file, not a folder;
+- **`<space>f` / `<space>F` (broot) open nothing**: `<ret>` must be on a file, not a folder;
   check `broot/kak.hjson` exists

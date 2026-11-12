@@ -54,8 +54,8 @@ formatters, tree-sitter grammar, theme and space-leader keys.
 
 | Key | Action | Key | Action |
 |---|---|---|---|
-| `<space>f` | files | `<space>/` | live grep |
-| `<space>,` | buffer picker | `<space>e` / `<space>E` | yazi / broot |
+| `<space>f` / `<space>F` | broot in the project root / in the file's directory | `<space>/` | live grep |
+| `<space>,` | buffer picker | `<space>e` / `<space>E` | yazi / files |
 | `<space>b` | buffer mode | `gn` / `gp` / `ga` | next / previous / last buffer |
 | `<space>k` | hover | `<space>a` | code action |
 | `<space>r` | rename | `<space>d` | diagnostics picker |

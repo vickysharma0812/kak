@@ -2,8 +2,9 @@
 # Old config: kakrc.bak-2026-10-27
 #
 # Leader is <space> (Kakoune's user mode), like Helix's space mode.
-#   <space>f  files          <space>/  live grep       <space>,  buffer picker
-#   <space>e  yazi           <space>E  broot           <space>h  git hunks / blame
+#   <space>f  broot (root)   <space>F  broot (here)    <space>E  files
+#   <space>/  live grep      <space>,  buffer picker   <space>h  git hunks / blame
+#   <space>e  yazi
 #   <space>b  buffer mode    gn / gp   next / prev buffer   ga  last buffer
 #   <space>s  goto symbol    <space>S  workspace syms  <space>d  diagnostics picker
 #   <space>D  diagnostics list (buffer)  <space>?  command palette  <space>'  last picker
@@ -534,11 +535,12 @@ define-command picker-palette-refresh -docstring 're-read the mappings for the p
 }
 hook global KakEnd .* %{ nop %sh{ rm -f "$kak_opt_picker_palette" } }
 
-map global user f ':picker-files<ret>'   -docstring 'files'
 map global user / ':picker-grep<ret>'    -docstring 'live grep'
 map global user , ':picker-buffers<ret>' -docstring 'buffer picker'
 map global user e ':yazi<ret>'           -docstring 'yazi file manager'
-map global user E ':broot<ret>'          -docstring 'broot in the project root'
+map global user E ':picker-files<ret>'   -docstring 'files'
+map global user f ':broot<ret>'          -docstring 'broot in the project root'
+map global user F ':broot-here<ret>'     -docstring "broot in the current file's directory"
 map global user d ':picker-diagnostics<ret>' -docstring 'diagnostics picker'
 map global user ? ':picker-palette<ret>' -docstring 'command palette (all keys)'
 map global user <quote> ':picker-resume<ret>' -docstring 'last picker'
