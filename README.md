@@ -8,8 +8,9 @@ formatters, tree-sitter grammar, theme and space-leader keys.
 ## Features
 
 - **Tree-sitter highlighting** via [kak-tree-sitter](https://sr.ht/~hadronized/kak-tree-sitter/),
-  reusing Helix's grammars and queries for Fortran, TOML, Markdown, CMake and JSON (code blocks
-  in Markdown are highlighted in their own language).
+  reusing Helix's grammars and queries for TOML, Markdown, CMake and JSON (code blocks
+  in Markdown are highlighted in their own language). Fortran uses its own, newer grammar
+  (upstream tree-sitter-fortran master) with queries adapted from Helix's.
 - **Soft wrap** at word boundaries for every file type, as in Helix.
 - **Indent guides**, a **green cursor in insert mode** and `gw` jump labels, as in Helix.
 - **Cursor position remembered** per file between sessions.
@@ -78,7 +79,7 @@ tmux popups or Rex floating panes, chosen per client) and started from **fish** 
 - The language servers and formatters in the table above
 - `fd`, `ripgrep`, `television` (`tv`), `fzf`, `bat`, `yazi`, `broot`, `lazygit`, `diffnav`, `perl`, and `jq` under Rex
 - Helix with its grammars built (`hx --grammar build`): kak-tree-sitter reads the
-  Fortran, TOML, Markdown and CMake grammars and queries in `~/.config/helix/runtime`, and
+  TOML, Markdown and CMake grammars and queries in `~/.config/helix/runtime`, and
   Markdown's inline grammar and the JSON grammar from Homebrew's Helix (`/opt/homebrew/opt/helix`).
 
 ## Install
@@ -96,7 +97,8 @@ adjust it if Kakoune is installed elsewhere.
 | Path | What |
 |---|---|
 | `kakrc` | main config |
-| `kak-tree-sitter.toml` | kak-tree-sitter config (Fortran, TOML, Markdown, CMake and JSON grammars from Helix) |
+| `kak-tree-sitter.toml` | kak-tree-sitter config (TOML, Markdown, CMake and JSON grammars from Helix; Fortran from `tree-sitter/`) |
+| `tree-sitter/queries/fortran` | Fortran queries, copied from Helix and adapted to the newer grammar |
 | `autoload/fortran.kak` | Fortran filetype and indentation |
 | `colors/gruvbox.kak` | default theme, including tree-sitter faces |
 | `colors/catppuccin-mocha.kak` | alternative theme, same faces |

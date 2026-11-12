@@ -10,14 +10,15 @@
 # queries; their faces fall back to ts_keyword, as Helix does.
 groups = ["function.call", "keyword.repeat", "keyword.modifier", "keyword.return"]
 
-# Fortran is not in the KTS defaults. Reuse the grammar and queries that Helix
-# already built from the tree-sitter-fortran fork, so both editors stay in sync.
-# After `hx --grammar build`, nothing needs to be done here.
+# Fortran is not in the KTS defaults. Kakoune uses its own, newer grammar
+# (upstream tree-sitter-fortran master), built by bin/build-fortran-grammar,
+# with queries copied from Helix and adapted to it (operator tokens are plain
+# ".and." strings; the do-loop node is `do_loop`). Helix keeps its own grammar.
 [grammar.fortran.source.local]
-path = "/Users/easifem/.config/helix/runtime/grammars/fortran.so"
+path = "/Users/easifem/.config/kak/tree-sitter/grammars/fortran.so"
 
 [language.fortran.queries.source.local]
-path = "/Users/easifem/.config/helix/runtime/queries/fortran"
+path = "/Users/easifem/.config/kak/tree-sitter/queries/fortran"
 
 [language.fortran]
 remove_default_highlighter = true

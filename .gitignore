@@ -5,3 +5,8 @@ kakrc.bak-*
 .DS_Store
 # patched scls, built by bin/build-scls-kak
 bin/scls-kak
+
+*.zip
+# built by bin/build-fortran-grammar
+tree-sitter/grammars/
+bin/build-fortran-grammar
