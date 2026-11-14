@@ -202,6 +202,7 @@ hook global BufSetOption filetype=fortran %{
             "--hover_language", "fortran",
             "--use_signature_help",
             "--incremental_sync",
+            "--prefer_implementation",
             "--include_dirs",
             "/home/easifem/Dropbox/easifem/base/src/submodules/include/",
             "/home/easifem/Dropbox/easifem/classes/src/submodules/include/",
