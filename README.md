@@ -87,10 +87,14 @@ from **fish** (which sets `SNIPPETS_PATH`).
   cc -O2 -shared -fPIC -I src src/parser.c src/scanner.c -o ../../grammars/fortran.so
   ```
   Its queries are tracked in `tree-sitter/queries/fortran`.
-- Helix with its grammars built (`hx --grammar build`): kak-tree-sitter reads the
-  TOML, Markdown and CMake grammars and queries in `~/.config/helix/runtime`, and
-  Markdown's inline grammar and the JSON, fish and YAML grammars from the system Helix runtime
-  (`/usr/lib/helix/runtime` on Arch, `/opt/homebrew/opt/helix/libexec/runtime` with Homebrew).
+- The other grammars (TOML, Markdown, JSON, CMake, fish, YAML, C, C++) are
+  copied from Helix into `tree-sitter/grammars/` (not in git) once, with the
+  commands in `kak-tree-sitter.toml`. They come from `~/.config/helix/runtime`
+  (`hx --grammar build`) and the system Helix runtime (`/usr/lib/helix/runtime`
+  on Arch, `/opt/homebrew/opt/helix/libexec/runtime` with Homebrew).
+  kak-tree-sitter never reads Helix's directories itself. Their queries are
+  tracked in `tree-sitter/queries/`.
+- For C and C++: `clangd` and `clang-format` (from clang / LLVM).
 
 ## Install
 

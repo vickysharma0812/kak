@@ -26,57 +26,91 @@ path = "/home/easifem/.config/kak/tree-sitter/queries/fortran"
 [language.fortran]
 remove_default_highlighter = true
 
-# TOML: also reuse Helix's grammar and queries (KTS would otherwise need
-# `ktsctl sync toml`), so TOML looks the same in both editors.
+# The other languages use grammars and queries copied from Helix into
+# tree-sitter/, so this config never reads Helix's directories at run time and
+# the languages look the same in both editors. tree-sitter/grammars/ is not in
+# git: recreate (or refresh, after a Helix update) the copies with
+#   cd ~/.config/kak/tree-sitter
+#   H=~/.config/helix/runtime S=/usr/lib/helix/runtime
+#   for l in toml markdown cmake; do cp -L $H/grammars/$l.so grammars/
+#     rm -rf queries/$l; cp -rL $H/queries/$l queries/; done
+#   for l in json fish yaml c cpp; do cp -L $S/grammars/$l.so grammars/; done
+#   cp -L $S/grammars/markdown_inline.so grammars/
+#   for l in markdown.inline json fish yaml c; do
+#     rm -rf queries/$l; cp -rL $S/queries/$l queries/; done
+# then rebuild queries/cpp (below). toml, markdown and cmake come from the
+# grammars Helix builds in ~/.config/helix/runtime; the rest from the system
+# Helix (/usr/lib/helix), as ~/.config/helix/runtime does not build them.
+
 [grammar.toml.source.local]
-path = "/home/easifem/.config/helix/runtime/grammars/toml.so"
+path = "/home/easifem/.config/kak/tree-sitter/grammars/toml.so"
 
 [language.toml.queries.source.local]
-path = "/home/easifem/.config/helix/runtime/queries/toml"
+path = "/home/easifem/.config/kak/tree-sitter/queries/toml"
 
 # Markdown, as Helix does it: a block grammar (headings, lists, code blocks)
 # whose queries inject an inline grammar (bold, italic, code spans, links) into
 # each paragraph, and the fence's language into fenced code blocks.
-# The block grammar is the one Helix builds; the inline one is not built in
-# ~/.config/helix, so it comes from the system Helix runtime (/usr/lib/helix) (as in Helix).
 [grammar.markdown.source.local]
-path = "/home/easifem/.config/helix/runtime/grammars/markdown.so"
+path = "/home/easifem/.config/kak/tree-sitter/grammars/markdown.so"
 
 [language.markdown.queries.source.local]
-path = "/home/easifem/.config/helix/runtime/queries/markdown"
+path = "/home/easifem/.config/kak/tree-sitter/queries/markdown"
 
 [grammar."markdown.inline".source.local]
-path = "/usr/lib/helix/runtime/grammars/markdown_inline.so"
+path = "/home/easifem/.config/kak/tree-sitter/grammars/markdown_inline.so"
 
 [language."markdown.inline".queries.source.local]
-path = "/usr/lib/helix/runtime/queries/markdown.inline"
+path = "/home/easifem/.config/kak/tree-sitter/queries/markdown.inline"
 
-# JSON (snippet files): ~/.config/helix/runtime has no JSON grammar, so use
-# the system Helix runtime (/usr/lib/helix), as Helix itself does.
+# JSON (snippet files).
 [grammar.json.source.local]
-path = "/usr/lib/helix/runtime/grammars/json.so"
+path = "/home/easifem/.config/kak/tree-sitter/grammars/json.so"
 
 [language.json.queries.source.local]
-path = "/usr/lib/helix/runtime/queries/json"
+path = "/home/easifem/.config/kak/tree-sitter/queries/json"
 
-# CMake: Helix's grammar and queries, as for TOML.
 [grammar.cmake.source.local]
-path = "/home/easifem/.config/helix/runtime/grammars/cmake.so"
+path = "/home/easifem/.config/kak/tree-sitter/grammars/cmake.so"
 
 [language.cmake.queries.source.local]
-path = "/home/easifem/.config/helix/runtime/queries/cmake"
+path = "/home/easifem/.config/kak/tree-sitter/queries/cmake"
 
-# Fish and YAML: ~/.config/helix/runtime builds neither, so use the system
-# Helix runtime (/usr/lib/helix), as for JSON. YAML also highlights the
-# `---` front matter of Markdown files (the Markdown queries inject it).
 [grammar.fish.source.local]
-path = "/usr/lib/helix/runtime/grammars/fish.so"
+path = "/home/easifem/.config/kak/tree-sitter/grammars/fish.so"
 
 [language.fish.queries.source.local]
-path = "/usr/lib/helix/runtime/queries/fish"
+path = "/home/easifem/.config/kak/tree-sitter/queries/fish"
 
+# YAML also highlights the `---` front matter of Markdown files (the Markdown
+# queries inject it).
 [grammar.yaml.source.local]
-path = "/usr/lib/helix/runtime/grammars/yaml.so"
+path = "/home/easifem/.config/kak/tree-sitter/grammars/yaml.so"
 
 [language.yaml.queries.source.local]
-path = "/usr/lib/helix/runtime/queries/yaml"
+path = "/home/easifem/.config/kak/tree-sitter/queries/yaml"
+
+# C and C++. Helix's C++ queries start with "; inherits: c", so queries/cpp
+# holds them with the C ones prepended (what Helix does with that line).
+# Rebuild it after refreshing the copies:
+#   q=/usr/lib/helix/runtime/queries; d=queries/cpp
+#   for f in highlights injections textobjects indents; do
+#     { cat $q/c/$f.scm; echo; grep -v '^; inherits: c$' $q/cpp/$f.scm; } > $d/$f.scm
+#   done; cp $q/c/locals.scm $d/
+[grammar.c.source.local]
+path = "/home/easifem/.config/kak/tree-sitter/grammars/c.so"
+
+[language.c.queries.source.local]
+path = "/home/easifem/.config/kak/tree-sitter/queries/c"
+
+[language.c]
+remove_default_highlighter = true
+
+[grammar.cpp.source.local]
+path = "/home/easifem/.config/kak/tree-sitter/grammars/cpp.so"
+
+[language.cpp.queries.source.local]
+path = "/home/easifem/.config/kak/tree-sitter/queries/cpp"
+
+[language.cpp]
+remove_default_highlighter = true

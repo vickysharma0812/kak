@@ -236,6 +236,25 @@ hook global BufSetOption filetype=cmake %{
     set-option -add buffer lsp_servers %opt{lsp_scls}
 }
 
+# C and C++: clangd. It reads compile flags from compile_commands.json (CMake:
+# -DCMAKE_EXPORT_COMPILE_COMMANDS=ON, then link or copy it to the project root)
+# or compile_flags.txt; a .clangd file tunes it per project. clang-tidy checks
+# come from the project's .clang-tidy.
+hook global BufSetOption filetype=(c|cpp) %{
+    set-option buffer lsp_servers %{
+        [clangd]
+        root_globs = ["compile_commands.json", "compile_flags.txt", ".clangd", "CMakeLists.txt", ".git"]
+        args = [
+            "--background-index",
+            "--clang-tidy",
+            "--completion-style=detailed",
+            "--header-insertion=never",
+            "--function-arg-placeholders=0",
+        ]
+    }
+    set-option -add buffer lsp_servers %opt{lsp_scls}
+}
+
 hook global BufSetOption filetype=toml %{
     set-option buffer lsp_servers %{
         [taplo]
@@ -287,7 +306,7 @@ hook global BufSetOption filetype=bibtex %{
     set-option -add buffer lsp_servers %opt{lsp_scls}
 }
 
-hook global WinSetOption filetype=(fortran|cmake|toml|latex|bibtex) %{
+hook global WinSetOption filetype=(fortran|cmake|c|cpp|toml|latex|bibtex) %{
     # A window that changes filetype and comes back is already set up; skip it,
     # but keep any other failure visible in *debug*.
     try %{
@@ -479,6 +498,12 @@ hook global WinSetOption filetype=markdown %{
 hook global WinSetOption filetype=bibtex %{
     set-option window formatcmd 'bibtex-tidy - --curly --drop-all-caps --remove-empty-fields --sort-fields --sort=year,author,id --strip-enclosing-braces --trailing-commas'
 }
+# clang-format finds the project's .clang-format from the file's path. With
+# none, --fallback-style=none leaves the code as it is, so format-on-save never
+# restyles a project that has no clang-format setup.
+hook global WinSetOption filetype=(c|cpp) %{
+    set-option window formatcmd "clang-format --fallback-style=none --assume-filename='%val{buffile}'"
+}
 hook global WinSetOption filetype=toml     %{ set-option window lsp_format_server taplo }
 hook global WinSetOption filetype=latex    %{ set-option window lsp_format_server texlab }
 
@@ -494,7 +519,7 @@ define-command format-smart -docstring 'format the buffer (formatcmd or LSP)' %{
     }
 }
 
-hook global WinSetOption filetype=(fortran|cmake|bibtex|toml|markdown|latex) %{
+hook global WinSetOption filetype=(fortran|cmake|c|cpp|bibtex|toml|markdown|latex) %{
     hook -group format-on-save window BufWritePre .* %{
         try %{ format-smart } catch %{ echo -debug "format: %val{error}" }
     }
