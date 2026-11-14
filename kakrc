@@ -50,6 +50,9 @@ set-option global tabstop 2
 set-option global indentwidth 2
 set-option global autowrap_column 78
 set-option global grepcmd 'rg --column --smart-case'
+# reload a buffer as soon as its file changes on disk (e.g. edited by an agent)
+# instead of asking; unsaved edits in the buffer are lost when it reloads
+set-option global autoreload yes
 
 # Case-insensitive select and search, like Helix: each regex prompt starts with
 # (?i). Delete it for an exact-case match.
