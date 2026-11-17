@@ -70,92 +70,120 @@
    .
    (end_subroutine_statement))) @function.around
 
-; entry objects (used for loop)
+; Construct objects. KTS takes any capture name; kakrc maps them to object
+; mode (mi / ma, <a-i> / <a-a>) and to the <space>t search menus:
+;   d  loop         do, do while, do concurrent
+;   k  block        block, associate
+;   e  conditional  if / else if / else, select case, select type
+; "inside" is the body (without the opening and closing statements); in an
+; if or select it is the body of the branch the cursor is in. "around" is the
+; whole construct, label included. A quantified (_)+ capture spans all its
+; nodes (patches/kak-tree-sitter-text-objects.patch).
 
-; Maybe the below line show the Error diagnostic, but it works as intended
+; loop objects
+
+(do_loop) @loop.around
+
 ((do_loop
-  (_)
-  . 
-  (_)+ @entry.inside
+  (do_statement)
   .
-  (end_do_loop_statement))) @entry.around
-   
-; comment objects (used for "c"onditionals)
+  (_)+ @loop.inside
+  .
+  (end_do_loop_statement)))
 
-(if_statement) @comment.around
+; block objects
 
+(block_construct) @block.around
+
+; `block` is an anonymous token, so the first named child is the label or the
+; body. With a label, the second pattern also matches but its span is wider;
+; KTS picks the narrowest one around the cursor.
+((block_construct
+  (block_label_start_expression)
+  .
+  (_)+ @block.inside
+  .
+  (end_block_construct_statement)))
+
+((block_construct
+  .
+  (_)+ @block.inside
+  .
+  (end_block_construct_statement)))
+
+(associate_statement) @block.around
+
+((associate_statement
+  (association_list)
+  .
+  (_)+ @block.inside
+  .
+  (end_associate_statement)))
+
+; conditional objects
+
+(if_statement) @conditional.around
+
+; The if body runs from the first node after the condition to the node just
+; before the first else-if / else / end if. A quantified (_)+ would be greedy
+; and run on over the clauses, so the first and last body nodes are captured
+; separately (KTS spans all the nodes of a capture in a match), and the last
+; one may not be a clause: nodes that start with "else" / "else if" are refused.
 ((if_statement
-   (parenthesized_expression)
-   . 
-   (_)+ @comment.inside
-   .
-   [
+  (parenthesized_expression)
+  .
+  (_) @conditional.inside
+  (_) @conditional.inside
+  .
+  [
     (elseif_clause)
     (else_clause)
     (end_if_statement)
-   ]))
+  ])
+  (#not-match? @conditional.inside "^[Ee][Ll][Ss][Ee]([^A-Za-z0-9_]|[Ii][Ff][^A-Za-z0-9_])"))
 
-((elseif_clause 
+((if_statement
   (parenthesized_expression)
-  . 
-  (_)+ @comment.inside
   .
-  ))
-  
-
-((else_clause 
-  . 
-  (_)+ @comment.inside
+  (_) @conditional.inside
   .
-  ))
+  [
+    (elseif_clause)
+    (else_clause)
+    (end_if_statement)
+  ])
+  (#not-match? @conditional.inside "^[Ee][Ll][Ss][Ee]([^A-Za-z0-9_]|[Ii][Ff][^A-Za-z0-9_])"))
 
-(select_case_statement) @comment.around
+((elseif_clause
+  (parenthesized_expression)
+  .
+  (_)+ @conditional.inside
+  .))
 
-(select_case_statement
-   (selector)
-   . 
-   (_)+ @comment.inside
-   .
-   [
-   (end_select_statement)
-   (case_statement)
-   ]) @comment.around
+((else_clause
+  .
+  (_)+ @conditional.inside
+  .))
 
-((case_statement 
+(select_case_statement) @conditional.around
+
+((case_statement
   (_)
-  . 
-  (_)+ @comment.inside
   .
-  ))
+  (_)+ @conditional.inside
+  .))
 
-(select_type_statement) @comment.around
+(select_type_statement) @conditional.around
 
-(select_type_statement
-   (selector)
-   . 
-   (_)+ @comment.inside
-   .
-   [
-   (end_select_statement)
-   (type_statement)
-   ])
-
-((type_statement 
+((type_statement
   (_)
-  . 
-  (_)+ @comment.inside
   .
-  ))
+  (_)+ @conditional.inside
+  .))
 
-; test objects used for block
+; comment objects
 
-(block_construct) @test.around
-
-((block_construct
-   .
-   (_)+ @test.inside
-   .
-   (end_block_construct_statement)))
+(comment) @comment.inside @comment.around
 
 ; parameter objects 
 

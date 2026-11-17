@@ -13,6 +13,7 @@
 #   <space>l  all LSP cmds (l s goto symbol, l S symbol list)
 #   <space>j  jjui           <space>J  jjdiff          <space>g  tuicr
 #   <space>G  tuicrdiff (uncommitted)          <space>+  easifem build/test
+#   :vs / :hs [file]  split right / below (tmux or Rex)   <space>w  window: h/j/k/l move, v/s split, q close
 #   gd / gr / gy             definition / references / type definition
 #   m         match / surround (mm ms mr md mi ma), as in Helix
 #   gw        jump to a word by its two-letter label, as in Helix
@@ -573,6 +574,48 @@ map global buffer o ':delete-other-buffers<ret>'    -docstring 'close others'
 map global buffer w ':write<ret>'                   -docstring 'write'
 map global buffer W ':write-all<ret>'               -docstring 'write all'
 
+# ─── window splits (tmux panes or Rex blocks) ─────────────────────────────────
+# :vs / :hs [file] open a new client of this session to the right / below, on
+# the current buffer and cursor (or on <file>). bin/kak-window uses tmux or Rex,
+# whichever this client runs in. <space>w h/j/k/l moves between panes,
+# <space>w q quits this client (a split's pane closes with it).
+define-command -hidden window-run -params 2.. %{ nop %sh{
+    (
+        export TMUX=$kak_client_env_TMUX TMUX_PANE=$kak_client_env_TMUX_PANE \
+            REX_SERVER=$kak_client_env_REX_SERVER REX_SESSION=$kak_client_env_REX_SESSION \
+            REX_BLOCK=$kak_client_env_REX_BLOCK REX_BIN_DIR=$kak_client_env_REX_BIN_DIR
+        action=$1 dir=$2; shift 2
+        exec "$kak_config/bin/kak-window" "$action" "$dir" "$kak_session" "$kak_client" "$@"
+    ) >/dev/null 2>&1 </dev/null &
+} }
+define-command -hidden window-split -params 1..2 %{ evaluate-commands %sh{
+    q() { printf "'%s'" "$(printf %s "$1" | sed "s/'/''/g")"; }
+    if [ $# -eq 2 ]; then
+        init="edit $(q "$2")"
+    else
+        init="buffer $(q "$kak_bufname"); select $kak_selection_desc; execute-keys vc"
+    fi
+    printf 'window-run split %s %s\n' "$1" "$(q "$init")"
+} }
+define-command vsplit -params ..1 -file-completion -docstring 'vsplit [<file>]: open this buffer (or <file>) in a new pane to the right' %{
+    window-split right %arg{@}
+}
+define-command hsplit -params ..1 -file-completion -docstring 'hsplit [<file>]: open this buffer (or <file>) in a new pane below' %{
+    window-split below %arg{@}
+}
+alias global vs vsplit
+alias global hs hsplit
+
+declare-user-mode window
+map global user   w ':enter-user-mode window<ret>'      -docstring 'window (pane) mode'
+map global window v ':vsplit<ret>'                     -docstring 'split right'
+map global window s ':hsplit<ret>'                     -docstring 'split below'
+map global window h ':window-run focus left<ret>'      -docstring 'pane left'
+map global window j ':window-run focus down<ret>'      -docstring 'pane below'
+map global window k ':window-run focus up<ret>'        -docstring 'pane above'
+map global window l ':window-run focus right<ret>'     -docstring 'pane right'
+map global window q ':quit<ret>'                       -docstring 'close pane (quit this client)'
+
 # ─── tree-sitter keys ─────────────────────────────────────────────────────────
 # <space>t opens the KTS menu: f/a/t/c = search function/parameter/type/comment,
 # s = select parent node, r/c = next/prev sibling.
@@ -580,6 +623,26 @@ map global user t ':enter-user-mode tree-sitter<ret>' -docstring 'tree-sitter'
 # expand / shrink selection to parent / child node (Helix's <a-o>/<a-i>)
 map global normal <a-up>   ":tree-sitter-nav '""parent""'<ret>"
 map global normal <a-down> ":tree-sitter-nav '""first_child""'<ret>"
+
+# Fortran constructs as text objects (tree-sitter/queries/fortran/textobjects.scm),
+# in object mode, so mi / ma (and <a-i> <a-a> [ ] { }) take them:
+#   d  do loop   k  block / associate   e  if / else if / else, select case / type
+# mid = loop body, mad = whole loop; in an if, mie = the branch the cursor is in.
+# <space>t / ? f F <a-f>... and k (select) take the same keys.
+hook global WinSetOption filetype=fortran %{
+    evaluate-commands %sh{
+        for k in d:loop k:block e:conditional; do
+            key=${k%%:*} obj=${k#*:}
+            echo "map window object $key '<a-;>tree-sitter-object-text-objects $obj<ret>' -docstring '$obj (tree-sitter)'"
+            echo "map window tree-sitter-select $key ':tree-sitter-text-objects $obj.around select<ret>' -docstring '$obj'"
+            for m in search:search_next search-rev:search_prev search-extend:search_extend_next \
+                search-extend-rev:search_extend_prev find:find_next find-rev:find_prev \
+                find-extend:extend_next find-extend-rev:extend_prev; do
+                echo "map window tree-sitter-${m%%:*} $key ':tree-sitter-text-objects $obj.around ${m#*:}<ret>' -docstring '$obj'"
+            done
+        done
+    }
+}
 
 # ─── remember the cursor position ─────────────────────────────────────────────
 # Reopening a file puts the cursor where it was. Positions are kept in

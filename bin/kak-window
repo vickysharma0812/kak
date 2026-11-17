@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+# Splits and pane focus for the Kakoune client that asked: tmux panes under
+# tmux, Rex blocks under Rex (tmux wins when Kakoune runs in tmux inside Rex).
+# usage: kak-window split <right|below> <session> <client> <init-commands>
+#        kak-window focus <left|down|up|right> <session> <client>
+# A split runs a new client of the same session, which runs <init-commands>.
+# TMUX, TMUX_PANE and REX_* must be the client's (kakrc's window-run passes them):
+# the Kakoune server may have been started in another terminal.
+
+action=$1 dir=$2 session=$3 client=$4 init=$5
+
+fail() {
+    printf 'evaluate-commands -client %s %%{ echo -markup "{Error}%s" }\n' "$client" "$1" |
+        kak -p "$session"
+    exit 1
+}
+
+kak_bin=$(command -v kak) || fail 'kak not on PATH'
+
+if [ -n "$TMUX" ]; then
+    case $action:$dir in
+        split:right) exec tmux split-window -h -t "$TMUX_PANE" -c "$PWD" "$kak_bin" -c "$session" -e "$init" ;;
+        split:below) exec tmux split-window -v -t "$TMUX_PANE" -c "$PWD" "$kak_bin" -c "$session" -e "$init" ;;
+        focus:left)  exec tmux select-pane -L -t "$TMUX_PANE" ;;
+        focus:down)  exec tmux select-pane -D -t "$TMUX_PANE" ;;
+        focus:up)    exec tmux select-pane -U -t "$TMUX_PANE" ;;
+        focus:right) exec tmux select-pane -R -t "$TMUX_PANE" ;;
+    esac
+    fail "kak-window: bad arguments: $action $dir"
+fi
+
+[ -n "$REX_BLOCK" ] || fail 'splits need tmux or Rex'
+# (a server started outside Rex doesn't have rex on its PATH)
+[ -n "$REX_BIN_DIR" ] && PATH=$PATH:$REX_BIN_DIR
+command -v rex >/dev/null || fail 'rex not on PATH'
+
+case $action in
+    split)
+        # no --keep-open: the block closes when the client quits
+        rex split -s "$REX_SESSION" -b "$REX_BLOCK" --split="$dir" -c "$PWD" \
+            --label kak -- "$kak_bin" -c "$session" -e "$init" >/dev/null ||
+            fail 'could not split the Rex pane' ;;
+    focus)
+        rex focus "$dir" -s "$REX_SESSION" >/dev/null 2>&1 ;;
+    *) fail "kak-window: bad arguments: $action $dir" ;;
+esac
