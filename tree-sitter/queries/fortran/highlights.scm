@@ -1,4 +1,13 @@
 ; see https://docs.helix-editor.com/themes.html
+
+; select type / select case: the generic lists below give "type" @type and
+; "class"/(default) @keyword, so these context patterns come first (the first
+; matching pattern wins) to colour the whole construct as one conditional.
+(select_type_statement ["select" "type"] @keyword.control.conditional)
+(select_rank_statement ["select" "rank"] @keyword.control.conditional)
+(type_statement ["type" "class" "is" (default)] @keyword.control.conditional)
+(case_statement ["case" (default)] @keyword.control.conditional)
+
 "end" @number
 (identifier) @variable
 (string_literal) @string
